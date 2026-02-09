@@ -4,15 +4,29 @@ import { Button } from '@/components/ui/button';
 import { getSuitSymbol, isRedSuit } from '@/lib/cardUtils';
 import { cn } from '@/lib/utils';
 import { KeyHint } from './KeyHint';
+import type { Card, Player, TapState } from '@/types/game';
 
-export function TapWindow() {
-  const tapState = useGameStore((s) => s.tapState);
-  const activateTap = useGameStore((s) => s.activateTap);
-  const confirmTapDiscard = useGameStore((s) => s.confirmTapDiscard);
-  const skipTapSwap = useGameStore((s) => s.skipTapSwap);
-  const finalizeTap = useGameStore((s) => s.finalizeTap);
-  const discardPile = useGameStore((s) => s.discardPile);
-  const players = useGameStore((s) => s.players);
+export interface TapWindowProps {
+  tapState?: TapState | null;
+  discardPile?: Card[];
+  players?: Player[];
+  onActivateTap?: () => void;
+  onConfirmTapDiscard?: () => void;
+  onSkipTapSwap?: () => void;
+  onFinalizeTap?: () => void;
+}
+
+export function TapWindow(props: TapWindowProps) {
+  const store = useGameStore();
+  
+  const tapState = props.tapState ?? store.tapState;
+  const discardPile = props.discardPile ?? store.discardPile;
+  const players = props.players ?? store.players;
+
+  const activateTap = props.onActivateTap ?? store.activateTap;
+  const confirmTapDiscard = props.onConfirmTapDiscard ?? store.confirmTapDiscard;
+  const skipTapSwap = props.onSkipTapSwap ?? store.skipTapSwap;
+  const finalizeTap = props.onFinalizeTap ?? store.finalizeTap;
 
   if (!tapState) return null;
 
@@ -26,11 +40,11 @@ export function TapWindow() {
       {tapState.phase === 'window' && (
         <motion.div
           key="tap-window"
-          initial={{ opacity: 0, scale: 2 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.5 }}
+          initial={{ opacity: 0, scale: 2, x: '-50%' }}
+          animate={{ opacity: 1, scale: 1, x: '-50%' }}
+          exit={{ opacity: 0, scale: 0.5, x: '-50%' }}
           transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-          className="fixed bottom-36 left-1/2 z-50 -translate-x-1/2 flex flex-col items-center gap-2"
+          className="fixed bottom-1/3 left-1/2 z-50 flex flex-col items-center gap-2"
         >
           <motion.button
             onClick={activateTap}
@@ -67,10 +81,10 @@ export function TapWindow() {
       {tapState.phase === 'selecting' && (
         <motion.div
           key="tap-selecting"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-36 left-1/2 z-50 -translate-x-1/2 flex flex-col items-center gap-2"
+          initial={{ opacity: 0, y: 20, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 20, x: '-50%' }}
+          className="fixed bottom-36 left-1/2 z-50 flex flex-col items-center gap-2"
         >
           <div className="rounded-xl bg-card/95 backdrop-blur-sm border border-border/30 px-6 py-3 text-center shadow-lg">
             <p className="font-display text-sm font-bold text-foreground">
@@ -106,10 +120,10 @@ export function TapWindow() {
       {tapState.phase === 'swapping' && (
         <motion.div
           key="tap-swapping"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-36 left-1/2 z-50 -translate-x-1/2 flex flex-col items-center gap-2"
+          initial={{ opacity: 0, y: 20, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 20, x: '-50%' }}
+          className="fixed bottom-36 left-1/2 z-50 flex flex-col items-center gap-2"
         >
           <div className="rounded-xl bg-card/95 backdrop-blur-sm border border-border/30 px-6 py-3 text-center shadow-lg">
             <p className="font-display text-sm font-bold text-foreground">

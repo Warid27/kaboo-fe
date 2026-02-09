@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Modal } from '@/components/ui/modal';
 
 const TABS = ['Rules', 'Game Flow', 'Strategy'] as const;
 type Tab = (typeof TABS)[number];
@@ -23,83 +23,48 @@ export function HelpModal() {
       </motion.button>
 
       {/* Modal */}
-      <AnimatePresence>
-        {open && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-              className="fixed inset-0 z-50 bg-background/70 backdrop-blur-sm"
-            />
-
-            {/* Content */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-              className="fixed inset-x-4 bottom-4 top-12 z-50 flex flex-col overflow-hidden rounded-2xl border border-border/40 bg-card shadow-card sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:h-[80vh] sm:max-h-[600px] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-border/30 px-4 py-3">
-                <h2 className="font-display text-lg font-bold text-foreground">
-                  How to Play
-                </h2>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex gap-1 border-b border-border/30 px-4 pt-2">
-                {TABS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={cn(
-                      'relative rounded-t-lg px-3 py-2 font-body text-sm font-semibold transition-colors',
-                      tab === t
-                        ? 'text-primary'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    {t}
-                    {tab === t && (
-                      <motion.div
-                        layoutId="help-tab-indicator"
-                        className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary"
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto px-5 py-4">
-                <AnimatePresence mode="wait">
+      <Modal open={open} onClose={() => setOpen(false)} title="How to Play">
+          {/* Tabs */}
+          <div className="flex gap-1 border-b border-border/30 px-4 pt-2 shrink-0">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  'relative rounded-t-lg px-3 py-2 font-body text-sm font-semibold transition-colors',
+                  tab === t
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t}
+                {tab === t && (
                   <motion.div
-                    key={tab}
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    {tab === 'Rules' && <RulesContent />}
-                    {tab === 'Game Flow' && <GameFlowContent />}
-                    {tab === 'Strategy' && <StrategyContent />}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                    layoutId="help-tab-indicator"
+                    className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.15 }}
+              >
+                {tab === 'Rules' && <RulesContent />}
+                {tab === 'Game Flow' && <GameFlowContent />}
+                {tab === 'Strategy' && <StrategyContent />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+      </Modal>
     </>
   );
 }

@@ -3,19 +3,32 @@ import { useGameStore } from '@/store/gameStore';
 import { getEffectName, getEffectDescription } from '@/lib/cardUtils';
 import { Button } from '@/components/ui/button';
 import { KeyHint } from './KeyHint';
+import type { EffectType, Player } from '@/types/game';
 
-export function EffectOverlay() {
-  const {
-    showEffectOverlay,
-    effectType,
-    effectStep,
-    selectedCards,
-    effectPreviewCardIds,
-    effectTimeRemaining,
-    declineEffect,
-    confirmEffect,
-    players,
-  } = useGameStore();
+export interface EffectOverlayProps {
+  showEffectOverlay?: boolean;
+  effectType?: EffectType;
+  effectStep?: 'select' | 'preview' | 'resolve' | null;
+  selectedCards?: string[];
+  effectPreviewCardIds?: string[];
+  effectTimeRemaining?: number;
+  players?: Player[];
+  onDecline?: () => void;
+  onConfirm?: () => void;
+}
+
+export function EffectOverlay(props: EffectOverlayProps) {
+  const store = useGameStore();
+
+  const showEffectOverlay = props.showEffectOverlay ?? store.showEffectOverlay;
+  const effectType = props.effectType ?? store.effectType;
+  const effectStep = props.effectStep ?? store.effectStep;
+  const selectedCards = props.selectedCards ?? store.selectedCards;
+  const effectPreviewCardIds = props.effectPreviewCardIds ?? store.effectPreviewCardIds;
+  const effectTimeRemaining = props.effectTimeRemaining ?? store.effectTimeRemaining;
+  const players = props.players ?? store.players;
+  const declineEffect = props.onDecline ?? store.declineEffect;
+  const confirmEffect = props.onConfirm ?? store.confirmEffect;
 
   if (!showEffectOverlay || !effectType) return null;
 
@@ -77,11 +90,11 @@ export function EffectOverlay() {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: -60 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -60 }}
+        initial={{ opacity: 0, y: '-50%', x: '-50%', scale: 0.95 }}
+        animate={{ opacity: 1, y: '-75%', x: '-50%', scale: 1 }}
+        exit={{ opacity: 0, y: '-60%', x: '-50%', scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="fixed left-4 right-4 top-14 z-40 mx-auto max-w-sm rounded-2xl border border-border bg-card/95 p-4 shadow-card backdrop-blur-md sm:p-4"
+        className="fixed left-1/2 top-1/2 z-40 w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-card/95 p-4 shadow-card backdrop-blur-md sm:p-4"
       >
         <div className="flex items-start gap-3">
           <span className="text-3xl">{emoji}</span>

@@ -1,9 +1,20 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
+import type { Player } from '@/types/game';
 
-export function KabooAnnouncement() {
-  const { showKabooAnnouncement, players, kabooCallerIndex } = useGameStore();
+export interface KabooAnnouncementProps {
+  showKabooAnnouncement?: boolean;
+  kabooCallerIndex?: number | null;
+  players?: Player[];
+}
+
+export function KabooAnnouncement(props: KabooAnnouncementProps) {
+  const store = useGameStore();
+  const showKabooAnnouncement = props.showKabooAnnouncement ?? store.showKabooAnnouncement;
+  const players = props.players ?? store.players;
+  const kabooCallerIndex = props.kabooCallerIndex ?? store.kabooCallerIndex;
+
   const anim = useAnimationConfig();
 
   const callerName = kabooCallerIndex !== null ? players[kabooCallerIndex]?.name : '';

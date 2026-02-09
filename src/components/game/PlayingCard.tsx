@@ -22,7 +22,13 @@ interface PlayingCardProps {
 const sizeClasses = {
   sm: 'h-12 w-8 md:h-16 md:w-11',
   md: 'h-16 w-11 md:h-24 md:w-16',
-  lg: 'h-24 w-16 md:h-32 md:w-[5.5rem]',
+  lg: 'h-28 w-20 md:h-32 md:w-[5.5rem]',
+};
+
+const radiusClasses = {
+  sm: 'rounded-md',
+  md: 'rounded-lg',
+  lg: 'rounded-xl',
 };
 
 export function PlayingCard({
@@ -71,7 +77,8 @@ export function PlayingCard({
         {/* Front face */}
         <div
           className={cn(
-            'absolute inset-0 flex flex-col items-center justify-center rounded bg-foreground',
+            'absolute inset-0 flex flex-col items-center justify-center bg-foreground',
+            radiusClasses[size],
             isSelected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
             isHighlighted && 'ring-2 ring-primary/50 ring-offset-1 ring-offset-background',
           )}
@@ -99,7 +106,8 @@ export function PlayingCard({
         {/* Back face */}
         <div
           className={cn(
-          'absolute inset-0 flex items-center justify-center rounded bg-muted',
+          'absolute inset-0 flex items-center justify-center bg-muted',
+            radiusClasses[size],
             isSelected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
             isHighlighted && !showFace && 'ring-2 ring-accent/60 ring-offset-1 ring-offset-background animate-pulse',
           )}

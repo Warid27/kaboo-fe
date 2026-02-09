@@ -16,13 +16,14 @@ interface OpponentHandProps {
 }
 
 const positionClasses: Record<string, string> = {
-  top: 'top-2 left-1/2 -translate-x-1/2',
-  left: 'left-2 top-1/2 -translate-y-1/2',
-  right: 'right-2 top-1/2 -translate-y-1/2',
-  'top-left': 'top-4 left-4',
-  'top-right': 'top-4 right-4',
-  'bottom-left': 'bottom-28 left-4',
-  'bottom-right': 'bottom-28 right-4',
+  top: '-top-2 left-1/2',
+  left: 'left-32 -bottom-1/2',
+  right: 'right-32 -bottom-1/2',
+  'top-left': 'top-4 left-32',
+  'top-right': 'top-4 right-32',
+  'bottom-left': 'bottom-14 left-2',
+  'bottom-right': 'bottom-14 right-2', 
+
 };
 
 export function OpponentHand({
@@ -36,10 +37,19 @@ export function OpponentHand({
 }: OpponentHandProps) {
   const anim = useAnimationConfig();
 
+  // Determine transform values based on position
+  const getTransforms = (pos: string) => {
+    if (pos === 'top') return { x: '-50%', y: 0 };
+    if (pos === 'left' || pos === 'right') return { x: 0, y: '-50%' };
+    return { x: 0, y: 0 };
+  };
+
+  const transforms = getTransforms(position);
+
   return (
     <motion.div
-      initial={anim.initial({ opacity: 0, scale: 0.8 })}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={anim.initial({ opacity: 0, scale: 0.8, ...transforms })}
+      animate={{ opacity: 1, scale: 1, ...transforms }}
       transition={anim.spring}
       className={`absolute ${positionClasses[position]} z-10`}
     >

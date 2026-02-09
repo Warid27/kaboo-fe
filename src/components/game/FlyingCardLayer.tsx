@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useGameStore } from '@/store/gameStore';
+import { useGameStore, type FlyingCardEntry } from '@/store/gameStore';
 import type { Card } from '@/types/game';
 import { getSuitSymbol, isRedSuit } from '@/lib/cardUtils';
 import { cn } from '@/lib/utils';
@@ -13,9 +13,16 @@ interface ActiveFlyingCard {
   to: { x: number; y: number };
 }
 
-export function FlyingCardLayer() {
-  const flyingCards = useGameStore((s) => s.flyingCards);
-  const removeFlyingCard = useGameStore((s) => s.removeFlyingCard);
+export interface FlyingCardLayerProps {
+  flyingCards?: FlyingCardEntry[];
+  onRemoveFlyingCard?: (id: string) => void;
+}
+
+export function FlyingCardLayer(props: FlyingCardLayerProps) {
+  const store = useGameStore();
+  const flyingCards = props.flyingCards ?? store.flyingCards;
+  const removeFlyingCard = props.onRemoveFlyingCard ?? store.removeFlyingCard;
+  
   const [active, setActive] = useState<ActiveFlyingCard[]>([]);
   const processedIds = useRef(new Set<string>());
   const anim = useAnimationConfig();
@@ -62,9 +69,9 @@ export function FlyingCardLayer() {
 
   if (active.length === 0) return null;
 
-  // Card dimensions match 'md' size: w-16 (64px), h-24 (96px)
-  const halfW = 32;
-  const halfH = 48;
+  // Card dimensions match 'lg' size (mobile): w-20 (80px), h-28 (112px)
+  const halfW = 40;
+  const halfH = 56;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[100]">
@@ -96,7 +103,7 @@ export function FlyingCardLayer() {
             } : { duration: 0 }}
             onAnimationComplete={() => handleComplete(fc.id)}
           >
-            <div className="h-24 w-16 flex flex-col items-center justify-center rounded-xl border-2 border-border/30 bg-foreground shadow-lg">
+            <div className="h-28 w-20 flex flex-col items-center justify-center rounded-xl border-2 border-border/30 bg-foreground shadow-lg">
               <span
                 className={cn(
                   'font-display text-sm font-bold leading-none',

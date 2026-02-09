@@ -2,10 +2,16 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { ChevronUp, ChevronDown, ScrollText } from 'lucide-react';
+import type { TurnLogEntry } from '@/types/game';
 
-export function TurnLog() {
+export interface TurnLogProps {
+  turnLog?: TurnLogEntry[];
+}
+
+export function TurnLog(props: TurnLogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const turnLog = useGameStore((s) => s.turnLog);
+  const store = useGameStore();
+  const turnLog = props.turnLog ?? store.turnLog;
 
   if (turnLog.length === 0) return null;
 

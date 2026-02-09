@@ -12,7 +12,7 @@ import { createTurnActions } from './slices/turnActions';
 
 type GameMode = 'online' | 'offline';
 
-interface FlyingCardEntry {
+export interface FlyingCardEntry {
   id: string;
   card: Card;
   fromAnchor: string;

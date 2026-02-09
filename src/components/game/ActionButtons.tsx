@@ -3,23 +3,44 @@ import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { KeyHint } from './KeyHint';
 
-export function ActionButtons() {
+import type { Player, GamePhase, TurnPhase, Card, GameSettings, TapState } from '@/types/game';
+
+export interface ActionButtonsProps {
+  turnPhase?: TurnPhase;
+  gamePhase?: GamePhase;
+  heldCard?: Card | null;
+  currentPlayerIndex?: number;
+  kabooCalled?: boolean;
+  selectedCards?: string[];
+  tapState?: TapState | null;
+  players?: Player[];
+  settings?: GameSettings;
+  onCallKaboo?: () => void;
+  onSwapCard?: (cardId: string) => void;
+  onDiscardHeldCard?: () => void;
+  onDiscardPair?: (cardId1: string, cardId2: string) => void;
+  onEndTurn?: () => void;
+}
+
+export function ActionButtons(props: ActionButtonsProps) {
+  const store = useGameStore();
   const {
-    turnPhase,
-    gamePhase,
-    heldCard,
-    currentPlayerIndex,
-    kabooCalled,
-    swapCard,
-    discardHeldCard,
-    discardPair,
-    endTurn,
-    callKaboo,
-    selectedCards,
-    tapState,
-    players,
-    settings,
-  } = useGameStore();
+    turnPhase = props.turnPhase ?? store.turnPhase,
+    gamePhase = props.gamePhase ?? store.gamePhase,
+    heldCard = props.heldCard ?? store.heldCard,
+    currentPlayerIndex = props.currentPlayerIndex ?? store.currentPlayerIndex,
+    kabooCalled = props.kabooCalled ?? store.kabooCalled,
+    selectedCards = props.selectedCards ?? store.selectedCards,
+    tapState = props.tapState ?? store.tapState,
+    players = props.players ?? store.players,
+    settings = props.settings ?? store.settings,
+  } = {};
+
+  const callKaboo = props.onCallKaboo ?? store.callKaboo;
+  const swapCard = props.onSwapCard ?? store.swapCard;
+  const discardHeldCard = props.onDiscardHeldCard ?? store.discardHeldCard;
+  const discardPair = props.onDiscardPair ?? store.discardPair;
+  const endTurn = props.onEndTurn ?? store.endTurn;
 
   const isPlayerTurn = currentPlayerIndex === 0;
   if (!isPlayerTurn || tapState) return null;

@@ -20,7 +20,7 @@ export function HeldCard({ card }: HeldCardProps) {
           <span className="font-display text-xs font-bold text-primary rounded-full bg-card/90 px-3 py-0.5 backdrop-blur-sm border border-primary/30">
             Drawn Card
           </span>
-          <div className="rounded-2xl bg-card/80 p-1.5 backdrop-blur-sm shadow-card border border-border/30">
+          <div className="rounded-2xl bg-card/80 p-1 backdrop-blur-sm shadow-card border border-border/30">
             <PlayingCard card={card} isFaceUp size="lg" />
           </div>
         </motion.div>

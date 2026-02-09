@@ -51,6 +51,7 @@ export default {
         },
         card: {
           DEFAULT: "hsl(var(--card))",
+          stack: "hsl(var(--card-stack))",
           foreground: "hsl(var(--card-foreground))",
         },
         kaboo: {
