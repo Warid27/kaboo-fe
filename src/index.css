@@ -1,0 +1,229 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 228 40% 8%;
+    --foreground: 40 20% 95%;
+
+    --card: 228 35% 13%;
+    --card-foreground: 40 20% 95%;
+
+    --popover: 228 35% 13%;
+    --popover-foreground: 40 20% 95%;
+
+    --primary: 174 80% 42%;
+    --primary-foreground: 228 40% 8%;
+
+    --secondary: 270 60% 55%;
+    --secondary-foreground: 40 20% 95%;
+
+    --muted: 228 25% 16%;
+    --muted-foreground: 228 15% 55%;
+
+    --accent: 330 80% 58%;
+    --accent-foreground: 40 20% 95%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 40 20% 95%;
+
+    --border: 228 25% 20%;
+    --input: 228 25% 20%;
+    --ring: 174 80% 42%;
+
+    --radius: 0.75rem;
+
+    /* Game-specific tokens */
+    --kaboo-teal: 174 80% 42%;
+    --kaboo-purple: 270 60% 55%;
+    --kaboo-orange: 25 90% 55%;
+    --kaboo-pink: 330 80% 58%;
+    --kaboo-gold: 45 90% 55%;
+    --kaboo-navy: 228 40% 8%;
+    --kaboo-navy-light: 228 35% 15%;
+
+    /* Suit colors */
+    --suit-red: 0 80% 55%;
+    --suit-black: 228 20% 80%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(174 80% 42%), hsl(200 80% 50%));
+    --gradient-accent: linear-gradient(135deg, hsl(330 80% 58%), hsl(270 60% 55%));
+    --gradient-gold: linear-gradient(135deg, hsl(45 90% 55%), hsl(25 90% 55%));
+    --gradient-card-back: linear-gradient(135deg, hsl(270 60% 45%), hsl(174 80% 35%));
+
+    /* Shadows */
+    --shadow-glow-primary: 0 0 20px hsl(174 80% 42% / 0.4);
+    --shadow-glow-accent: 0 0 20px hsl(330 80% 58% / 0.4);
+    --shadow-glow-gold: 0 0 20px hsl(45 90% 55% / 0.4);
+    --shadow-card: 0 4px 12px hsl(228 40% 4% / 0.5);
+
+    --sidebar-background: 228 35% 10%;
+    --sidebar-foreground: 40 20% 95%;
+    --sidebar-primary: 174 80% 42%;
+    --sidebar-primary-foreground: 228 40% 8%;
+    --sidebar-accent: 228 25% 16%;
+    --sidebar-accent-foreground: 40 20% 95%;
+    --sidebar-border: 228 25% 20%;
+    --sidebar-ring: 174 80% 42%;
+  }
+
+  .light {
+    --background: 40 30% 97%;
+    --foreground: 228 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 228 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 228 30% 15%;
+
+    --primary: 174 80% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 50% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 228 20% 92%;
+    --muted-foreground: 228 15% 45%;
+
+    --accent: 330 70% 52%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 228 15% 85%;
+    --input: 228 15% 85%;
+    --ring: 174 80% 36%;
+
+    /* Game-specific tokens */
+    --kaboo-teal: 174 80% 36%;
+    --kaboo-purple: 270 50% 50%;
+    --kaboo-orange: 25 85% 50%;
+    --kaboo-pink: 330 70% 52%;
+    --kaboo-gold: 45 85% 48%;
+    --kaboo-navy: 228 30% 15%;
+    --kaboo-navy-light: 228 20% 92%;
+
+    /* Suit colors */
+    --suit-red: 0 80% 45%;
+    --suit-black: 228 30% 20%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(174 80% 36%), hsl(200 70% 45%));
+    --gradient-accent: linear-gradient(135deg, hsl(330 70% 52%), hsl(270 50% 50%));
+    --gradient-gold: linear-gradient(135deg, hsl(45 85% 48%), hsl(25 85% 50%));
+    --gradient-card-back: linear-gradient(135deg, hsl(270 50% 50%), hsl(174 70% 40%));
+
+    /* Shadows */
+    --shadow-glow-primary: 0 0 20px hsl(174 80% 36% / 0.25);
+    --shadow-glow-accent: 0 0 20px hsl(330 70% 52% / 0.25);
+    --shadow-glow-gold: 0 0 20px hsl(45 85% 48% / 0.25);
+    --shadow-card: 0 4px 12px hsl(228 30% 15% / 0.1);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 228 30% 15%;
+    --sidebar-primary: 174 80% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 228 20% 92%;
+    --sidebar-accent-foreground: 228 30% 15%;
+    --sidebar-border: 228 15% 85%;
+    --sidebar-ring: 174 80% 36%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fredoka', sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Fredoka', sans-serif;
+  }
+
+  .font-body {
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .text-suit-red {
+    color: hsl(var(--suit-red));
+  }
+
+  .text-suit-black {
+    color: hsl(var(--suit-black));
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .gradient-gold {
+    background: var(--gradient-gold);
+  }
+
+  .gradient-card-back {
+    background: var(--gradient-card-back);
+  }
+
+  .glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  .glow-accent {
+    box-shadow: var(--shadow-glow-accent);
+  }
+
+  .glow-gold {
+    box-shadow: var(--shadow-glow-gold);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .text-gradient-primary {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-accent {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  .min-h-\[3rem\] {
+    min-height: 3rem;
+  }
+}

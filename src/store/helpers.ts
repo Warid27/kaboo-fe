@@ -1,0 +1,61 @@
+import type { Player, TurnLogEntry } from '@/types/game';
+import { AVATAR_COLORS, MOCK_PLAYER_NAMES } from '@/types/game';
+import type { GameStore } from './gameStore';
+
+export type StoreGet = () => GameStore;
+export type StoreSet = {
+  (partial: Partial<GameStore> | ((state: GameStore) => Partial<GameStore>)): void;
+};
+
+let logIdCounter = 0;
+
+export function addLog(
+  get: StoreGet,
+  set: StoreSet,
+  playerIndex: number,
+  message: string,
+) {
+  const { players, turnLog } = get();
+  const player = players[playerIndex];
+  if (!player) return;
+  const entry: TurnLogEntry = {
+    id: `log-${++logIdCounter}`,
+    playerName: player.name,
+    playerColor: player.avatarColor,
+    message,
+  };
+  set({ turnLog: [...turnLog, entry] });
+}
+
+export function generateRoomCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+export function createMockPlayers(count: number, hostName: string): Player[] {
+  const players: Player[] = [
+    {
+      id: 'player-0',
+      name: hostName || 'You',
+      avatarColor: AVATAR_COLORS[0],
+      cards: [],
+      isHost: true,
+      score: 0,
+      totalScore: 0,
+    },
+  ];
+
+  for (let i = 1; i < count; i++) {
+    players.push({
+      id: `player-${i}`,
+      name: MOCK_PLAYER_NAMES[i] ?? `Player ${i + 1}`,
+      avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
+      cards: [],
+      isHost: false,
+      score: 0,
+      totalScore: 0,
+    });
+  }
+
+  return players;
+}
