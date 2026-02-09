@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useDevStore } from '@/store/devStore';
 import { GameBoardLayout } from './GameBoardLayout';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useGameInstruction } from './useGameInstruction';
 
 export function GameBoard() {
   const {
@@ -21,11 +23,18 @@ export function GameBoard() {
     effectType,
     effectStep,
     effectPreviewCardIds,
+    effectTimeRemaining,
     settings,
     turnTimeRemaining,
     kabooCalled,
+    kabooCallerIndex,
+    showKabooAnnouncement,
     finalRoundTurnsLeft,
     tapState,
+    showEffectOverlay,
+    roundNumber,
+    turnLog,
+    flyingCards,
     drawCard,
     peekCard,
     selectCard,
@@ -33,7 +42,11 @@ export function GameBoard() {
     tapSelectCard,
     tapSwapCard,
     isPaused,
-    roundNumber,
+    callKaboo,
+    swapCard,
+    discardHeldCard,
+    discardPair,
+    endTurn,
   } = useGameStore();
 
   const instruction = useGameInstruction();
@@ -122,16 +135,27 @@ export function GameBoard() {
       effectType={effectType}
       effectStep={effectStep}
       effectPreviewCardIds={effectPreviewCardIds}
+      effectTimeRemaining={effectTimeRemaining}
       settings={settings}
       turnTimeRemaining={turnTimeRemaining}
       kabooCalled={kabooCalled}
+      kabooCallerIndex={kabooCallerIndex}
+      showKabooAnnouncement={showKabooAnnouncement}
       finalRoundTurnsLeft={finalRoundTurnsLeft}
       tapState={tapState}
+      showEffectOverlay={showEffectOverlay}
       instruction={instruction}
       roundNumber={roundNumber}
+      turnLog={turnLog}
+      flyingCards={flyingCards}
       onPlayerCardClick={handlePlayerCardClick}
       onOpponentCardClick={handleOpponentCardClick}
       onDrawClick={handleDrawClick}
+      onCallKaboo={callKaboo}
+      onSwapCard={swapCard}
+      onDiscardHeldCard={discardHeldCard}
+      onDiscardPair={discardPair}
+      onEndTurn={endTurn}
     />
   );
 }
