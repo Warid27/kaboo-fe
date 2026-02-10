@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { Hand, RefreshCw } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
-import { getSuitSymbol, isRedSuit } from '@/lib/cardUtils';
+import { isRedSuit } from '@/lib/cardUtils';
 import { cn } from '@/lib/utils';
+import { SuitIcon } from './SuitIcon';
 import { KeyHint } from './KeyHint';
 import type { Card, Player, TapState } from '@/types/game';
 
@@ -31,7 +33,6 @@ export function TapWindow(props: TapWindowProps) {
   if (!tapState) return null;
 
   const topDiscard = discardPile[discardPile.length - 1];
-  const topSymbol = topDiscard ? getSuitSymbol(topDiscard.suit) : '';
   const topIsRed = topDiscard ? isRedSuit(topDiscard.suit) : false;
 
   return (
@@ -57,20 +58,21 @@ export function TapWindow(props: TapWindowProps) {
               ],
             }}
             transition={{ duration: 0.6, repeat: Infinity }}
-            className="rounded-2xl gradient-accent px-8 py-4 font-display text-2xl font-bold text-accent-foreground"
+            className="rounded-2xl gradient-accent px-8 py-4 font-display text-2xl font-bold text-accent-foreground flex items-center gap-3"
           >
-            TAP! 🫳 <KeyHint action="tap" />
+            TAP! <Hand className="h-8 w-8" /> <KeyHint action="tap" />
           </motion.button>
           {topDiscard && (
             <div className="flex items-center gap-1 rounded-full bg-card/90 px-3 py-1 backdrop-blur-sm border border-border/30">
               <span className="font-body text-xs text-muted-foreground">Match:</span>
               <span
                 className={cn(
-                  'font-display text-sm font-bold',
+                  'font-display text-sm font-bold flex items-center gap-1',
                   topIsRed ? 'text-[hsl(var(--suit-red))]' : 'text-foreground',
                 )}
               >
-                {topDiscard.rank}{topSymbol}
+                {topDiscard.rank}
+                <SuitIcon suit={topDiscard.suit} className="h-3.5 w-3.5" />
               </span>
             </div>
           )}
@@ -87,10 +89,11 @@ export function TapWindow(props: TapWindowProps) {
           className="fixed bottom-36 left-1/2 z-50 flex flex-col items-center gap-2"
         >
           <div className="rounded-xl bg-card/95 backdrop-blur-sm border border-border/30 px-6 py-3 text-center shadow-lg">
-            <p className="font-display text-sm font-bold text-foreground">
+            <p className="font-display text-sm font-bold text-foreground flex items-center justify-center gap-1">
               Tap cards matching{' '}
-              <span className={cn(topIsRed ? 'text-[hsl(var(--suit-red))]' : '')}>
-                {topDiscard?.rank}{topSymbol}
+              <span className={cn('flex items-center gap-0.5', topIsRed ? 'text-[hsl(var(--suit-red))]' : '')}>
+                {topDiscard?.rank}
+                {topDiscard && <SuitIcon suit={topDiscard.suit} className="h-3.5 w-3.5" />}
               </span>
             </p>
             <p className="font-body text-xs text-muted-foreground mt-0.5">
@@ -126,8 +129,8 @@ export function TapWindow(props: TapWindowProps) {
           className="fixed bottom-36 left-1/2 z-50 flex flex-col items-center gap-2"
         >
           <div className="rounded-xl bg-card/95 backdrop-blur-sm border border-border/30 px-6 py-3 text-center shadow-lg">
-            <p className="font-display text-sm font-bold text-foreground">
-              🔄 Swap Privilege!
+            <p className="font-display text-sm font-bold text-foreground flex items-center justify-center gap-2">
+              <RefreshCw className="h-4 w-4" /> Swap Privilege!
             </p>
             <p className="font-body text-xs text-muted-foreground mt-0.5">
               Select your card to place in{' '}

@@ -6,6 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { GameSettings } from './GameSettings';
 import { PlayerList } from './PlayerList';
+import { Bot, Zap } from 'lucide-react';
 
 export function LobbyScreen() {
   const { roomCode, players, startGame, backToLobby, gameMode } = useGameStore();
@@ -74,7 +75,7 @@ export function LobbyScreen() {
           transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
           className="mb-6 flex items-center gap-2 rounded-xl bg-muted px-5 py-3"
         >
-          <span className="text-2xl">🤖</span>
+          <Bot className="h-6 w-6 text-primary" />
           <div>
             <p className="font-display text-sm font-bold text-foreground">Offline Mode</p>
             <p className="font-body text-xs text-muted-foreground">
@@ -134,9 +135,17 @@ export function LobbyScreen() {
         >
           <Button
             onClick={handleStart}
-            className="h-14 w-full rounded-xl font-display text-xl font-bold gradient-gold text-primary-foreground glow-gold hover:brightness-110 transition-all"
+            className="h-14 w-full rounded-xl font-display text-xl font-bold gradient-gold text-primary-foreground glow-gold hover:brightness-110 transition-all gap-2"
           >
-            {isOffline ? '🤖 Start vs Bots' : '⚡ Start Game'}
+            {isOffline ? (
+              <>
+                <Bot className="h-6 w-6" /> Start vs Bots
+              </>
+            ) : (
+              <>
+                <Zap className="h-6 w-6 fill-current" /> Start Game
+              </>
+            )}
           </Button>
         </motion.div>
       </div>

@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
+import { Eye } from 'lucide-react';
 import type { Card } from '@/types/game';
-import { getSuitSymbol, isRedSuit } from '@/lib/cardUtils';
+import { isRedSuit } from '@/lib/cardUtils';
 import { CardBackPattern } from './CardBackPattern';
+import { SuitIcon } from './SuitIcon';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
@@ -44,7 +46,6 @@ export function PlayingCard({
   className,
 }: PlayingCardProps) {
   const showFace = isFaceUp || isPeeked;
-  const symbol = getSuitSymbol(card.suit);
   const isRed = isRedSuit(card.suit);
   const isMobile = useIsMobile();
   const anim = useAnimationConfig();
@@ -93,14 +94,13 @@ export function PlayingCard({
           >
             {card.rank}
           </span>
-          <span
+          <SuitIcon
+            suit={card.suit}
             className={cn(
               isRed ? 'text-[hsl(var(--suit-red))]' : 'text-background',
-              size === 'sm' ? 'text-xs md:text-sm' : size === 'md' ? 'text-sm md:text-lg' : 'text-lg md:text-2xl',
+              size === 'sm' ? 'h-3 w-3 md:h-3.5 md:w-3.5' : size === 'md' ? 'h-3.5 w-3.5 md:h-5 md:w-5' : 'h-5 w-5 md:h-6 md:w-6',
             )}
-          >
-            {symbol}
-          </span>
+          />
         </div>
 
         {/* Back face */}
@@ -121,9 +121,9 @@ export function PlayingCard({
             <motion.div
               initial={anim.initial({ scale: 0 })}
               animate={{ scale: 1 }}
-              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs"
+              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
             >
-              👁
+              <Eye className="h-3 w-3" />
             </motion.div>
           )}
         </div>

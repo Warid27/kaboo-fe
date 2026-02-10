@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { Flame, RefreshCw, Trash2, Layers, Check } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { KeyHint } from './KeyHint';
@@ -68,7 +69,7 @@ export function ActionButtons(props: ActionButtonsProps) {
             onClick={callKaboo}
             className="h-12 w-full rounded-xl font-display text-lg font-bold gradient-gold text-primary-foreground glow-gold hover:brightness-110 transition-all sm:h-12 min-h-[3rem]"
           >
-            🔥 Call KABOO! <KeyHint action="kaboo" />
+            <Flame className="mr-2 h-5 w-5 fill-current" /> Call KABOO! <KeyHint action="kaboo" />
           </Button>
         </motion.div>
       )}
@@ -92,13 +93,13 @@ export function ActionButtons(props: ActionButtonsProps) {
               disabled={selectedCards.length === 0}
               className="flex-1 h-12 rounded-xl font-display text-base font-bold gradient-primary text-primary-foreground glow-primary hover:brightness-110 transition-all disabled:opacity-40 min-h-[3rem]"
             >
-              🔄 Swap <KeyHint action="swap" />
+              <RefreshCw className="mr-2 h-4 w-4" /> Swap <KeyHint action="swap" />
             </Button>
             <Button
               onClick={discardHeldCard}
               className="flex-1 h-12 rounded-xl font-display text-base font-bold gradient-accent text-accent-foreground glow-accent hover:brightness-110 transition-all min-h-[3rem]"
             >
-              🗑 Discard <KeyHint action="discard" />
+              <Trash2 className="mr-2 h-4 w-4" /> Discard <KeyHint action="discard" />
             </Button>
           </div>
 
@@ -113,7 +114,7 @@ export function ActionButtons(props: ActionButtonsProps) {
                 onClick={() => discardPair(selectedCards[0], selectedCards[1])}
                 className="w-full h-12 rounded-xl font-display text-base font-bold bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all min-h-[3rem]"
               >
-                🃏 Discard Pair
+                <Layers className="mr-2 h-4 w-4" /> Discard Pair
               </Button>
             </motion.div>
           )}
@@ -132,7 +133,7 @@ export function ActionButtons(props: ActionButtonsProps) {
             onClick={endTurn}
             className="h-12 w-full rounded-xl font-display text-base font-bold bg-muted text-foreground hover:bg-muted/80 transition-all min-h-[3rem]"
           >
-            ✓ End Turn <KeyHint action="endTurn" />
+            <Check className="mr-2 h-4 w-4" /> End Turn <KeyHint action="endTurn" />
           </Button>
         </motion.div>
       )}

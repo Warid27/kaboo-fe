@@ -68,7 +68,7 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
           ...p,
           cards: p.cards.filter((c) => !matchingCardIds.includes(c.id)),
         }));
-        addLog(get, set, 0, `🫳 tapped ${matchingCardIds.length} matching card(s)`);
+        addLog(get, set, 0, `[HAND] tapped ${matchingCardIds.length} matching card(s)`);
         playTapSuccessSound();
 
         if (swapTargets.length > 0) {
@@ -87,11 +87,9 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
           const updatedPlayers = players.map((p, i) =>
             i === 0 ? { ...p, cards: [...p.cards, { ...penaltyCard, faceUp: false }] } : p
           );
-          set({ players: updatedPlayers, drawPile: drawPile.slice(1), penaltySkipTurn: true });
-        } else {
-          set({ penaltySkipTurn: true });
+          set({ players: updatedPlayers, drawPile: drawPile.slice(1) });
         }
-        addLog(get, set, 0, '❌ wrong tap! Penalty card + skip next turn');
+        addLog(get, set, 0, '[CROSS] wrong tap! Penalty card');
         playTapPenaltySound();
         get().finalizeTap();
       }
@@ -114,7 +112,7 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
 
       const newSwapTargets = tapState.swapTargets.slice(1);
       const newSwapsRemaining = tapState.swapsRemaining - 1;
-      addLog(get, set, 0, `🔄 placed card in ${players[targetPlayerIndex].name}'s hand`);
+      addLog(get, set, 0, `[REFRESH] placed card in ${players[targetPlayerIndex].name}'s hand`);
 
       if (newSwapsRemaining > 0 && newSwapTargets.length > 0) {
         set({ players: updatedPlayers, tapState: { ...tapState, swapTargets: newSwapTargets, swapsRemaining: newSwapsRemaining } });

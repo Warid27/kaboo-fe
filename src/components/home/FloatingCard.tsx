@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import type { Suit, Rank } from '@/types/game';
-import { getSuitSymbol, isRedSuit } from '@/lib/cardUtils';
+import { isRedSuit } from '@/lib/cardUtils';
+import { SuitIcon } from '../game/SuitIcon';
 
 interface FloatingCardProps {
   suit: Suit;
@@ -12,7 +13,6 @@ interface FloatingCardProps {
 }
 
 export function FloatingCard({ suit, rank, delay, x, y, rotation }: FloatingCardProps) {
-  const symbol = getSuitSymbol(suit);
   const isRed = isRedSuit(suit);
 
   return (
@@ -47,9 +47,10 @@ export function FloatingCard({ suit, rank, delay, x, y, rotation }: FloatingCard
         <span className={`font-display text-xl font-bold ${isRed ? 'text-suit-red' : 'text-suit-black'}`}>
           {rank}
         </span>
-        <span className={`text-2xl ${isRed ? 'text-suit-red' : 'text-suit-black'}`}>
-          {symbol}
-        </span>
+        <SuitIcon
+          suit={suit}
+          className={`h-8 w-8 ${isRed ? 'text-suit-red' : 'text-suit-black'}`}
+        />
       </motion.div>
     </motion.div>
   );

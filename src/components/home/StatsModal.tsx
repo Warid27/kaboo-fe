@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { X, RotateCcw, Trophy, Target, Zap, Hash } from 'lucide-react';
+import { X, RotateCcw, Trophy, Target, Zap, Hash, ChartBar } from 'lucide-react';
 import { useStatsStore } from '@/store/statsStore';
 import { Button } from '@/components/ui/button';
 
@@ -53,7 +53,10 @@ export function StatsModal({ open, onClose }: StatsModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/30 px-4 py-3">
-          <h2 className="font-display text-lg font-bold text-foreground">📊 Lifetime Stats</h2>
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
+            <ChartBar className="h-5 w-5 text-primary" />
+            Lifetime Stats
+          </h2>
           <button
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

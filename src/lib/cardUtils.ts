@@ -94,12 +94,12 @@ export function getEffectDescription(effect: EffectType): string {
   }
 }
 
-export function getSuitSymbol(suit: Suit): string {
+export function getSuitToken(suit: Suit): string {
   switch (suit) {
-    case 'hearts': return '♥';
-    case 'diamonds': return '♦';
-    case 'clubs': return '♣';
-    case 'spades': return '♠';
+    case 'hearts': return '[HEART]';
+    case 'diamonds': return '[DIAMOND]';
+    case 'clubs': return '[CLUB]';
+    case 'spades': return '[SPADE]';
   }
 }
 

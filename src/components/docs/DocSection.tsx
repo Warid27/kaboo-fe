@@ -4,12 +4,16 @@ interface DocSectionProps {
   title: string;
   children: React.ReactNode;
   className?: string;
+  icon?: React.ReactNode;
 }
 
-export function DocSection({ title, children, className }: DocSectionProps) {
+export function DocSection({ title, children, className, icon }: DocSectionProps) {
   return (
     <section className={cn('mb-10 last:mb-0', className)}>
-      <h2 className="mb-4 font-display text-2xl font-bold text-foreground">{title}</h2>
+      <h2 className="mb-4 flex items-center gap-2 font-display text-2xl font-bold text-foreground">
+        {icon && <span className="text-primary">{icon}</span>}
+        {title}
+      </h2>
       <div className="space-y-3 font-body text-sm leading-relaxed text-foreground/80">
         {children}
       </div>

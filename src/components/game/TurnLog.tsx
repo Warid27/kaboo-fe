@@ -1,8 +1,39 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
-import { ChevronUp, ChevronDown, ScrollText } from 'lucide-react';
+import { ChevronUp, ChevronDown, ScrollText, Eye, Search, Shuffle, ScanEye, XCircle, RefreshCw, Crown, Flame, Hand, GalleryVerticalEnd, Heart, Diamond, Club, Spade } from 'lucide-react';
 import type { TurnLogEntry } from '@/types/game';
+
+const EMOJI_ICON_MAP: Record<string, React.ReactNode> = {
+  // New text-based tokens
+  '[EYE]': <Eye className="inline h-3 w-3" />,
+  '[SEARCH]': <Search className="inline h-3 w-3" />,
+  '[SHUFFLE]': <Shuffle className="inline h-3 w-3" />,
+  '[SCAN]': <ScanEye className="inline h-3 w-3" />,
+  '[CROSS]': <XCircle className="inline h-3 w-3 text-destructive" />,
+  '[REFRESH]': <RefreshCw className="inline h-3 w-3" />,
+  '[CROWN]': <Crown className="inline h-3 w-3" />,
+  '[KABOO]': <Flame className="inline h-3 w-3 text-orange-500" />,
+  '[HAND]': <Hand className="inline h-3 w-3" />,
+  '[CARDS]': <GalleryVerticalEnd className="inline h-3 w-3" />,
+  '[HEART]': <Heart className="inline h-3 w-3 fill-current" />,
+  '[DIAMOND]': <Diamond className="inline h-3 w-3 fill-current" />,
+  '[CLUB]': <Club className="inline h-3 w-3 fill-current" />,
+  '[SPADE]': <Spade className="inline h-3 w-3 fill-current" />,
+};
+
+function formatLogMessage(message: string) {
+  // Escape brackets for regex
+  const keys = Object.keys(EMOJI_ICON_MAP).map(k => k.replace(/\[/g, '\\[').replace(/\]/g, '\\]'));
+  const regex = new RegExp(`(${keys.join('|')})`, 'g');
+  const parts = message.split(regex);
+  return parts.map((part, i) => {
+    if (EMOJI_ICON_MAP[part]) {
+      return <span key={i} className="mx-0.5 inline-flex align-middle">{EMOJI_ICON_MAP[part]}</span>;
+    }
+    return part;
+  });
+}
 
 export interface TurnLogProps {
   turnLog?: TurnLogEntry[];
@@ -63,7 +94,7 @@ export function TurnLog(props: TurnLogProps) {
                   <div className="min-w-0">
                     <span className="font-body text-[11px] leading-tight text-foreground/70">
                       <span className="font-semibold text-foreground/90">{entry.playerName}</span>{' '}
-                      {entry.message}
+                      {formatLogMessage(entry.message)}
                     </span>
                   </div>
                 </motion.div>

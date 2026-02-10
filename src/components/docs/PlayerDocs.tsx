@@ -1,4 +1,5 @@
 import { DocSection, DocTable, Badge } from './DocSection';
+import { Target, GalleryVerticalEnd, RefreshCw, Keyboard, Bot, Trophy, Settings } from 'lucide-react';
 
 export function PlayerDocs() {
   return (
@@ -10,7 +11,7 @@ export function PlayerDocs() {
         </p>
       </div>
 
-      <DocSection title="🎯 Objective">
+      <DocSection title="Objective" icon={<Target className="h-6 w-6" />}>
         <p>
           The goal of KABOO is to have the <strong>lowest total card value</strong> in your hand
           when the round ends. You start the game knowing only 2 of your 4 cards — the rest are hidden.
@@ -18,7 +19,7 @@ export function PlayerDocs() {
         </p>
       </DocSection>
 
-      <DocSection title="🃏 Card Values">
+      <DocSection title="Card Values" icon={<GalleryVerticalEnd className="h-6 w-6" />}>
         <DocTable
           headers={['Card', 'Value', 'Notes']}
           rows={[
@@ -31,7 +32,7 @@ export function PlayerDocs() {
         />
       </DocSection>
 
-      <DocSection title="🔄 Game Flow">
+      <DocSection title="Game Flow" icon={<RefreshCw className="h-6 w-6" />}>
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-card p-4">
             <h3 className="mb-2 font-display text-base font-bold text-primary">1. Initial Look</h3>
@@ -86,7 +87,7 @@ export function PlayerDocs() {
         </div>
       </DocSection>
 
-      <DocSection title="⌨️ Keyboard Shortcuts">
+      <DocSection title="Keyboard Shortcuts" icon={<Keyboard className="h-6 w-6" />}>
         <DocTable
           headers={['Key', 'Action']}
           rows={[
@@ -102,11 +103,11 @@ export function PlayerDocs() {
           ]}
         />
         <p className="mt-2 text-muted-foreground">
-          Keyboard shortcuts can be customized in the Settings menu (⚙️ icon during gameplay).
+          Keyboard shortcuts can be customized in the Settings menu (<Settings className="inline h-3 w-3" /> icon during gameplay).
         </p>
       </DocSection>
 
-      <DocSection title="🤖 Bot Difficulty">
+      <DocSection title="Bot Difficulty" icon={<Bot className="h-6 w-6" />}>
         <DocTable
           headers={['Difficulty', 'Memory', 'Strategy']}
           rows={[
@@ -117,7 +118,7 @@ export function PlayerDocs() {
         />
       </DocSection>
 
-      <DocSection title="📊 Scoring">
+      <DocSection title="Scoring" icon={<Trophy className="h-6 w-6" />}>
         <ul className="list-inside list-disc space-y-1.5">
           <li>Each card&apos;s value is summed for your total</li>
           <li>Kings are worth <strong>0 points</strong></li>

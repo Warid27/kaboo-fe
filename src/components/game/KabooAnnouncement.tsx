@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { Flame } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
 import type { Player } from '@/types/game';
@@ -42,9 +43,9 @@ export function KabooAnnouncement(props: KabooAnnouncementProps) {
                 rotate: [0, -5, 5, 0],
               } : undefined}
               transition={anim.enabled ? { duration: 1.5, repeat: Infinity } : undefined}
-              className="mb-4 text-8xl"
+              className="mb-4 flex justify-center"
             >
-              🔥
+              <Flame className="h-24 w-24 text-orange-500 fill-orange-500 animate-pulse drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
             </motion.div>
 
             <motion.h1

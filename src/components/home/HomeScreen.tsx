@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FloatingCard } from './FloatingCard';
 import { StatsModal } from './StatsModal';
-import { BarChart3 } from 'lucide-react';
+import { Bot, Gamepad2, Users, BarChart3 } from 'lucide-react';
 
 export function HomeScreen() {
   const { setPlayerName, playerName, createGame, joinGame, startOffline } = useGameStore();
@@ -117,9 +117,9 @@ export function HomeScreen() {
         {/* Offline vs Bots — prominent */}
         <Button
           onClick={handleOffline}
-          className="h-14 rounded-xl font-display text-lg font-bold gradient-gold text-primary-foreground glow-gold hover:brightness-110 transition-all"
+          className="h-14 rounded-xl font-display text-lg font-bold gradient-gold text-primary-foreground glow-gold hover:brightness-110 transition-all gap-2"
         >
-          🤖 Play vs Bots
+          <Bot className="h-6 w-6" /> Play vs Bots
         </Button>
 
         <div className="flex gap-2">
@@ -127,9 +127,9 @@ export function HomeScreen() {
             onClick={handleCreate}
             disabled={!playerName.trim() || !isOnline}
             title={!isOnline ? 'Online mode is disabled' : undefined}
-            className="flex-1 h-12 rounded-xl font-display text-sm font-bold gradient-primary text-primary-foreground hover:brightness-110 transition-all disabled:opacity-40"
+            className="flex-1 h-12 rounded-xl font-display text-sm font-bold gradient-primary text-primary-foreground hover:brightness-110 transition-all disabled:opacity-40 gap-2"
           >
-            🃏 Create Game
+            <Gamepad2 className="h-4 w-4" /> Create Game
           </Button>
 
           {!showJoinInput ? (
@@ -137,9 +137,9 @@ export function HomeScreen() {
               onClick={() => setShowJoinInput(true)}
               disabled={!playerName.trim() || !isOnline}
               title={!isOnline ? 'Online mode is disabled' : undefined}
-              className="flex-1 h-12 rounded-xl font-display text-sm font-bold gradient-accent text-accent-foreground hover:brightness-110 transition-all disabled:opacity-40"
+              className="flex-1 h-12 rounded-xl font-display text-sm font-bold gradient-accent text-accent-foreground hover:brightness-110 transition-all disabled:opacity-40 gap-2"
             >
-              🎴 Join Game
+              <Users className="h-4 w-4" /> Join Game
             </Button>
           ) : null}
         </div>

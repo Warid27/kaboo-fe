@@ -1,6 +1,6 @@
 import type { StoreGet, StoreSet } from '../helpers';
 import { addLog } from '../helpers';
-import { getEffectType, getSuitSymbol } from '@/lib/cardUtils';
+import { getEffectType, getSuitToken } from '@/lib/cardUtils';
 import { createBotMemory, botRememberCard, botForgetCard } from '@/lib/botAI';
 import { playDrawSound, playSwapSound, playDiscardSound, playEffectSound, playPeekSound } from '@/lib/sounds';
 import { useReplayStore } from '../replayStore';
@@ -96,7 +96,7 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
 
       const effect = get().settings.useEffectCards ? getEffectType(oldCard.rank) : null;
 
-      addLog(get, set, currentPlayerIndex, `swapped → discarded ${oldCard.rank}${getSuitSymbol(oldCard.suit)}`);
+      addLog(get, set, currentPlayerIndex, `swapped → discarded ${oldCard.rank}${getSuitToken(oldCard.suit)}`);
       playSwapSound();
       if (effect && currentPlayerIndex === 0) {
         set({
@@ -132,7 +132,7 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       get().addFlyingCard(discarded, 'held-card', 'discard-pile');
       const effect = get().settings.useEffectCards ? getEffectType(discarded.rank) : null;
 
-      addLog(get, set, currentPlayerIndex, `discarded ${discarded.rank}${getSuitSymbol(discarded.suit)}`);
+      addLog(get, set, currentPlayerIndex, `discarded ${discarded.rank}${getSuitToken(discarded.suit)}`);
       playDiscardSound();
       if (effect) {
         playEffectSound();
@@ -148,11 +148,11 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
           effectPreviewCardIds: [],
         });
         const effectNames: Record<string, string> = {
-          peek_own: '👁 peeked at own card',
-          peek_opponent: '🔍 peeking at opponent card',
-          blind_swap: '🔀 blind swap activated',
-          semi_blind_swap: '🃏 semi-blind swap activated',
-          full_vision_swap: '👑 full vision swap activated',
+          peek_own: '[EYE] peeked at own card',
+          peek_opponent: '[SEARCH] peeked at opponent card',
+          blind_swap: '[SHUFFLE] blind swap activated',
+          semi_blind_swap: '[SCAN] semi-blind swap activated',
+          full_vision_swap: '[CROWN] full vision swap activated',
         };
         addLog(get, set, currentPlayerIndex, effectNames[effect] ?? 'used an effect');
       } else {
@@ -186,7 +186,7 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
           : p
       );
 
-      addLog(get, set, 0, `🃏 discarded pair of ${card1.rank}s`);
+      addLog(get, set, 0, `[CARDS] discarded pair of ${card1.rank}s`);
       playDiscardSound();
 
       set({

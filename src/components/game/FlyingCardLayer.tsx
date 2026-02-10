@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore, type FlyingCardEntry } from '@/store/gameStore';
 import type { Card } from '@/types/game';
-import { getSuitSymbol, isRedSuit } from '@/lib/cardUtils';
+import { isRedSuit } from '@/lib/cardUtils';
 import { cn } from '@/lib/utils';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
+import { SuitIcon } from './SuitIcon';
 
 interface ActiveFlyingCard {
   id: string;
@@ -76,7 +77,6 @@ export function FlyingCardLayer(props: FlyingCardLayerProps) {
   return (
     <div className="pointer-events-none fixed inset-0 z-[100]">
       {active.map((fc) => {
-        const symbol = getSuitSymbol(fc.card.suit);
         const isRed = isRedSuit(fc.card.suit);
 
         return (
@@ -112,14 +112,13 @@ export function FlyingCardLayer(props: FlyingCardLayerProps) {
               >
                 {fc.card.rank}
               </span>
-              <span
+              <SuitIcon
+                suit={fc.card.suit}
                 className={cn(
-                  'text-lg',
+                  'h-6 w-6',
                   isRed ? 'text-[hsl(var(--suit-red))]' : 'text-background',
                 )}
-              >
-                {symbol}
-              </span>
+              />
             </div>
           </motion.div>
         );

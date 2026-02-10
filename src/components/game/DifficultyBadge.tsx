@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { BotDifficulty } from '@/types/game';
+import { Star } from 'lucide-react';
 
 const config: Record<BotDifficulty, { stars: number; label: string; className: string }> = {
   easy: { stars: 1, label: 'Easy', className: 'bg-primary/20 text-primary' },
@@ -22,7 +23,10 @@ export function DifficultyBadge({ difficulty, size = 'md' }: DifficultyBadgeProp
         className,
       )}
     >
-      {'★'.repeat(stars)} {size === 'md' && label}
+      {Array.from({ length: stars }).map((_, i) => (
+        <Star key={i} className={cn('fill-current', size === 'sm' ? 'h-2 w-2' : 'h-3 w-3')} />
+      ))}
+      {size === 'md' && <span className="ml-0.5">{label}</span>}
     </span>
   );
 }

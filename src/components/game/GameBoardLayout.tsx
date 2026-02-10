@@ -1,5 +1,6 @@
 'use client';
 
+import { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PlayerHand } from './PlayerHand';
 import { OpponentHand } from './OpponentHand';
@@ -17,6 +18,7 @@ import { OptionsMenu } from './OptionsMenu';
 import { DevTools } from './DevTools';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
 import { useDevStore } from '@/store/devStore';
+import { GameInstruction } from './useGameInstruction';
 import type { Player, Card, GamePhase, TurnPhase, EffectType, GameSettings, TurnLogEntry, TapState } from '@/types/game';
 import type { FlyingCardEntry } from '@/store/gameStore';
 
@@ -53,7 +55,7 @@ export interface GameBoardLayoutProps {
   finalRoundTurnsLeft: number | null;
   tapState: TapState | null;
   showEffectOverlay?: boolean;
-  instruction: string;
+  instruction: GameInstruction | null;
   roundNumber: number;
   turnLog?: TurnLogEntry[];
   flyingCards?: FlyingCardEntry[];
@@ -152,18 +154,20 @@ export function GameBoardLayout({
 
       {/* Instruction banner */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={instruction}
-          initial={anim.initial({ opacity: 0, y: -10 })}
-          animate={{ opacity: 1, y: 0 }}
-          exit={anim.enabled ? { opacity: 0, y: 10 } : undefined}
-          transition={anim.fade}
-          className="shrink-0 px-4 py-0.5 text-center"
-        >
-          <span className="font-body text-sm font-semibold text-muted-foreground">
-            {instruction}
-          </span>
-        </motion.div>
+        {instruction && (
+          <motion.div
+            key={instruction.id}
+            initial={anim.initial({ opacity: 0, y: -10 })}
+            animate={{ opacity: 1, y: 0 }}
+            exit={anim.enabled ? { opacity: 0, y: 10 } : undefined}
+            transition={anim.fade}
+            className="shrink-0 px-4 py-0.5 text-center"
+          >
+            <span className="font-body text-sm font-semibold text-muted-foreground">
+              {instruction.content}
+            </span>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Game table area — fills remaining space */}

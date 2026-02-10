@@ -5,7 +5,7 @@ import {
   botResolveEffect, botRememberCard, botForgetCard,
 } from '@/lib/botAI';
 import type { BotDifficulty } from '@/types/game';
-import { getEffectType, getSuitSymbol, calculateScore } from '@/lib/cardUtils';
+import { getEffectType, getSuitToken, calculateScore } from '@/lib/cardUtils';
 import { playKabooSound } from '@/lib/sounds';
 import { useReplayStore } from '../replayStore';
 import { useStatsStore } from '../statsStore';
@@ -15,7 +15,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
   return {
     callKaboo: () => {
       const { currentPlayerIndex, players } = get();
-      addLog(get, set, currentPlayerIndex, '🔥 called KABOO!');
+      addLog(get, set, currentPlayerIndex, '[KABOO] called KABOO!');
       playKabooSound();
       set({
         kabooCalled: true,
@@ -95,7 +95,8 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
 
       // Should the bot call KABOO?
       if (!kabooCalled && gamePhase === 'playing' && botShouldCallKaboo(bot, memory, turnNumber, difficulty)) {
-        addLog(get, set, currentPlayerIndex, '🔥 called KABOO!');
+        addLog(get, set, currentPlayerIndex, '[KABOO] called KABOO!');
+        playKabooSound();
         set({
           kabooCalled: true,
           kabooCallerIndex: currentPlayerIndex,
@@ -155,7 +156,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
               heldCard: null,
               botMemories: updatedMem,
             });
-            addLog(get, set, currentPlayerIndex, `swapped → discarded ${oldCard.rank}${getSuitSymbol(oldCard.suit)}`);
+            addLog(get, set, currentPlayerIndex, `swapped → discarded ${oldCard.rank}${getSuitToken(oldCard.suit)}`);
 
             setTimeout(() => { get().openTapWindow(); }, 800);
           } else {
@@ -175,7 +176,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
             discardPile: [...currentState.discardPile, discarded],
             heldCard: null,
           });
-          addLog(get, set, currentPlayerIndex, `discarded ${discarded.rank}${getSuitSymbol(discarded.suit)}`);
+          addLog(get, set, currentPlayerIndex, `discarded ${discarded.rank}${getSuitToken(discarded.suit)}`);
 
           if (effect) {
             setTimeout(() => {
@@ -193,7 +194,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
                   const updatedMem = { ...effState.botMemories };
                   updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard);
                   set({ botMemories: updatedMem });
-                  addLog(get, set, currentPlayerIndex, '👁 peeked at own card');
+                  addLog(get, set, currentPlayerIndex, '[EYE] peeked at own card');
                 }
               } else if (effect === 'peek_opponent' && resolution.targetCardIds[0]) {
                 const allCards = effState.players.flatMap((p) => p.cards);
@@ -202,10 +203,10 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
                   const updatedMem = { ...effState.botMemories };
                   updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard);
                   set({ botMemories: updatedMem });
-                  addLog(get, set, currentPlayerIndex, '🔍 peeked at an opponent\'s card');
+                  addLog(get, set, currentPlayerIndex, "[SEARCH] peeked at an opponent's card");
                 }
               } else if (resolution.targetCardIds.length >= 2) {
-                addLog(get, set, currentPlayerIndex, '🔀 swapped two cards');
+                addLog(get, set, currentPlayerIndex, '[SHUFFLE] swapped two cards');
                 const updatedPlayers = [...effState.players];
                 let c1: { pi: number; ci: number } | null = null;
                 let c2: { pi: number; ci: number } | null = null;

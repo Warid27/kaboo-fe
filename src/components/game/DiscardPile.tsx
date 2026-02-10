@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Card } from '@/types/game';
-import { getSuitSymbol, isRedSuit } from '@/lib/cardUtils';
+import { isRedSuit } from '@/lib/cardUtils';
+import { SuitIcon } from './SuitIcon';
 import { cn } from '@/lib/utils';
 
 interface DiscardPileProps {
@@ -62,14 +63,13 @@ export function DiscardPile({ cards }: DiscardPileProps) {
             >
               {topCard.rank}
             </span>
-            <span
+            <SuitIcon
+              suit={topCard.suit}
               className={cn(
-                'text-2xl',
+                'h-6 w-6',
                 isRedSuit(topCard.suit) ? 'text-[hsl(var(--suit-red))]' : 'text-background',
               )}
-            >
-              {getSuitSymbol(topCard.suit)}
-            </span>
+            />
           </motion.div>
         )}
       </AnimatePresence>

@@ -12,7 +12,7 @@ This guide explains how to update the visual design of the playing cards in Kabo
 
 ---
 
-## 🎨 Updating the Front Design
+## Updating the Front Design
 
 The front face of the card is defined in `PlayingCard.tsx`.
 
@@ -31,8 +31,8 @@ The front face is a `div` containing the Rank (number/letter) and Suit Symbol.
 
 ### 2. Colors
 Colors are dynamic based on the suit:
-- **Red Suits (♥ ♦):** Uses `text-[hsl(var(--suit-red))]`
-- **Black Suits (♠ ♣):** Uses `text-background` (which usually resolves to dark/black in light mode)
+- **Red Suits (Hearts, Diamonds):** Uses `text-[hsl(var(--suit-red))]`
+- **Black Suits (Spades, Clubs):** Uses `text-background` (which usually resolves to dark/black in light mode)
 
 To change these colors, update the conditional classes in `PlayingCard.tsx` or adjust the CSS variables in `src/index.css`.
 
@@ -44,7 +44,7 @@ To change the position of the rank and suit (e.g., to have small rank in corners
 
 ---
 
-## 🃏 Updating the Back Design
+## Updating the Back Design
 
 The card back is a separate component to allow for complex patterns without cluttering the main logic.
 
@@ -66,7 +66,7 @@ The card back is a separate component to allow for complex patterns without clut
 
 ---
 
-## 📐 Sizing & Dimensions
+## Sizing & Dimensions
 
 Card sizes are controlled via the `size` prop and mapped to Tailwind classes in `PlayingCard.tsx`.
 
@@ -84,7 +84,7 @@ const sizeClasses = {
 
 ---
 
-## ✨ Animations
+## Animations
 
 Cards use **Framer Motion** for flip animations and movement.
 

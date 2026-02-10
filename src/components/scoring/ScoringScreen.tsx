@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { Confetti } from './Confetti';
+import { Crown, Trophy, Home, RefreshCw } from 'lucide-react';
+import { SuitIcon } from '../game/SuitIcon';
 
 export function ScoringScreen() {
   const { players, kabooCallerIndex, playAgain, backToLobby, matchOver, roundNumber, settings } = useGameStore();
@@ -51,9 +53,13 @@ export function ScoringScreen() {
         <motion.div
           animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="mb-2 text-6xl"
+          className="mb-2 flex justify-center"
         >
-          {matchOver ? '👑' : '🏆'}
+          {matchOver ? (
+            <Crown className="h-16 w-16 text-[hsl(45,90%,55%)] fill-[hsl(45,90%,55%)]" />
+          ) : (
+            <Trophy className="h-16 w-16 text-[hsl(45,90%,55%)] fill-[hsl(45,90%,55%)]" />
+          )}
         </motion.div>
         <h1 className="font-display text-4xl font-bold text-gradient-gold">
           {matchOver ? 'Match Over!' : `Round ${roundNumber} Complete`}
@@ -132,9 +138,10 @@ export function ScoringScreen() {
                   {player.cards.map((card) => (
                     <span
                       key={card.id}
-                      className="rounded bg-muted px-1.5 py-0.5 font-body text-xs text-muted-foreground"
+                      className="flex items-center gap-0.5 rounded bg-muted px-1.5 py-0.5 font-body text-xs text-muted-foreground"
                     >
-                      {card.rank}{card.suit === 'hearts' ? '♥' : card.suit === 'diamonds' ? '♦' : card.suit === 'clubs' ? '♣' : '♠'}
+                      {card.rank}
+                      <SuitIcon suit={card.suit} className="h-3 w-3" />
                     </span>
                   ))}
                 </div>
@@ -202,16 +209,24 @@ export function ScoringScreen() {
       >
         <Button
           onClick={handlePlayAgain}
-          className="flex-1 h-14 rounded-xl font-display text-lg font-bold gradient-primary text-primary-foreground glow-primary hover:brightness-110 transition-all"
+          className="flex-1 h-14 rounded-xl font-display text-lg font-bold gradient-primary text-primary-foreground glow-primary hover:brightness-110 transition-all gap-2"
         >
-          {matchOver ? '🏠 New Match' : '🔄 Next Round'}
+          {matchOver ? (
+            <>
+              <Home className="h-5 w-5" /> New Match
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-5 w-5" /> Next Round
+            </>
+          )}
         </Button>
         <Button
           onClick={handleBackToLobby}
           variant="outline"
-          className="flex-1 h-14 rounded-xl font-display text-lg font-bold"
+          className="flex-1 h-14 rounded-xl font-display text-lg font-bold gap-2"
         >
-          🏠 Home
+          <Home className="h-5 w-5" /> Home
         </Button>
       </motion.div>
     </div>

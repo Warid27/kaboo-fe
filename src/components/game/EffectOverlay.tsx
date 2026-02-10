@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, Search, Shuffle, ScanEye, Crown, Sparkles } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { getEffectName, getEffectDescription } from '@/lib/cardUtils';
 import { Button } from '@/components/ui/button';
@@ -35,12 +36,12 @@ export function EffectOverlay(props: EffectOverlayProps) {
   const name = getEffectName(effectType);
   const description = getEffectDescription(effectType);
 
-  const emoji =
-    effectType === 'peek_own' ? '👁' :
-    effectType === 'peek_opponent' ? '🔍' :
-    effectType === 'blind_swap' ? '🔀' :
-    effectType === 'semi_blind_swap' ? '🃏' :
-    effectType === 'full_vision_swap' ? '👑' : '✨';
+  const icon =
+    effectType === 'peek_own' ? <Eye className="h-8 w-8 text-primary" /> :
+    effectType === 'peek_opponent' ? <Search className="h-8 w-8 text-primary" /> :
+    effectType === 'blind_swap' ? <Shuffle className="h-8 w-8 text-primary" /> :
+    effectType === 'semi_blind_swap' ? <ScanEye className="h-8 w-8 text-primary" /> :
+    effectType === 'full_vision_swap' ? <Crown className="h-8 w-8 text-primary" /> : <Sparkles className="h-8 w-8 text-primary" />;
 
   // Step-specific instruction
   let instruction = '';
@@ -97,7 +98,9 @@ export function EffectOverlay(props: EffectOverlayProps) {
         className="fixed left-1/2 top-1/2 z-40 w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-card/95 p-4 shadow-card backdrop-blur-md sm:p-4"
       >
         <div className="flex items-start gap-3">
-          <span className="text-3xl">{emoji}</span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            {icon}
+          </span>
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-bold text-gradient-accent">

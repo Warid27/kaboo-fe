@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Folder, Blocks, FlaskConical, CheckCircle2, Construction, Landmark, FileText, Github } from 'lucide-react';
 import { DocSection, CodeBlock, DocTable, Badge } from './DocSection';
-
 const SUB_TABS = [
   { id: 'structure', label: 'Code Structure' },
-  { id: 'migration', label: 'Next.js Migration' },
   { id: 'roadmap', label: 'Roadmap' },
 ] as const;
 
@@ -19,8 +18,17 @@ export function DevDocs() {
       <div className="mb-8">
         <h1 className="font-display text-4xl font-bold text-gradient-primary">Developer Docs</h1>
         <p className="mt-2 font-body text-base text-muted-foreground">
-          Technical architecture, code structure, and migration guide.
+          Technical architecture, code structure, and development roadmap.
         </p>
+        <a 
+          href="https://github.com/Warid27/kaboo-fe" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 font-body text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <Github className="h-4 w-4" />
+          <span>github.com/Warid27/kaboo-fe</span>
+        </a>
       </div>
 
       {/* Sub-tabs */}
@@ -55,7 +63,6 @@ export function DevDocs() {
         transition={{ duration: 0.15 }}
       >
         {subTab === 'structure' && <StructureDocs />}
-        {subTab === 'migration' && <MigrationDocs />}
         {subTab === 'roadmap' && <RoadmapDocs />}
       </motion.div>
     </div>
@@ -65,9 +72,14 @@ export function DevDocs() {
 function StructureDocs() {
   return (
     <>
-      <DocSection title="📁 Project Structure">
+      <DocSection title="Project Structure" icon={<Folder className="h-6 w-6" />}>
         <CodeBlock title="Directory tree">{`src/
-├── assets/              # Static assets (card-back image)
+├── app/                 # Next.js App Router pages
+│   ├── page.tsx         # Home page
+│   ├── layout.tsx       # Root layout
+│   ├── game/            # Game route
+│   ├── lobby/           # Lobby route
+│   └── docs/            # Documentation route
 ├── components/
 │   ├── docs/            # Documentation pages
 │   ├── game/            # Core gameplay components
@@ -101,7 +113,6 @@ function StructureDocs() {
 │   ├── botAI.ts         # Bot decision engine
 │   ├── sounds.ts        # Web Audio API sound effects
 │   └── utils.ts         # General helpers (cn, etc.)
-├── pages/               # Route-level components
 ├── store/               # Zustand state management
 │   ├── gameStore.ts     # Root store & interface
 │   ├── settingsStore.ts # Persisted user preferences
@@ -118,7 +129,7 @@ function StructureDocs() {
     └── game.ts          # Zod schemas & TypeScript types`}</CodeBlock>
       </DocSection>
 
-      <DocSection title="🏗️ Architecture">
+      <DocSection title="Architecture" icon={<Blocks className="h-6 w-6" />}>
         <h3 className="font-display text-lg font-bold text-foreground mb-2">State Machine</h3>
         <p className="mb-3">
           The game is modeled as a <strong>finite state machine</strong> managed by Zustand.
@@ -156,13 +167,13 @@ TurnPhase:  draw → action → effect → tap_window → end_turn`}</CodeBlock>
         </p>
       </DocSection>
 
-      <DocSection title="🧪 Testing">
+      <DocSection title="Testing" icon={<FlaskConical className="h-6 w-6" />}>
         <p>
           Tests use <Badge>Vitest</Badge> and are located in <code className="rounded bg-muted px-1.5 py-0.5 text-xs">src/test/</code>.
           Test suites cover game actions, turn flow, and scoring logic by directly manipulating
           the Zustand store.
         </p>
-        <CodeBlock title="Run tests">{`bun run test          # or: bunx vitest run`}</CodeBlock>
+        <CodeBlock title="Run tests">{`npm run test          # or: npx vitest run`}</CodeBlock>
         <DocTable
           headers={['Test File', 'Coverage']}
           rows={[
@@ -176,138 +187,24 @@ TurnPhase:  draw → action → effect → tap_window → end_turn`}</CodeBlock>
   );
 }
 
-function MigrationDocs() {
-  return (
-    <>
-      <DocSection title="🚀 Migrating to Next.js">
-        <p>
-          The codebase is designed for portability. Here&apos;s a step-by-step guide to migrate
-          from the current Vite + React SPA to a Next.js application.
-        </p>
-      </DocSection>
-
-      <DocSection title="Step 1: Initialize Next.js Project">
-        <CodeBlock title="Terminal">{`npx create-next-app@latest kaboo-next --typescript --tailwind --app
-cd kaboo-next
-
-# Install dependencies
-npm install zustand zod framer-motion lucide-react
-npm install @radix-ui/react-dialog @radix-ui/react-popover  # + other radix primitives
-npm install class-variance-authority clsx tailwind-merge`}</CodeBlock>
-      </DocSection>
-
-      <DocSection title="Step 2: Move Source Files">
-        <DocTable
-          headers={['From (Vite)', 'To (Next.js)', 'Notes']}
-          rows={[
-            ['src/components/', 'src/components/', 'Copy as-is — all React components are compatible'],
-            ['src/store/', 'src/store/', 'Zustand stores work unchanged in Next.js'],
-            ['src/lib/', 'src/lib/', 'Pure utilities, no changes needed'],
-            ['src/types/', 'src/types/', 'Zod schemas work everywhere'],
-            ['src/hooks/', 'src/hooks/', 'Custom hooks are framework-agnostic'],
-            ['src/index.css', 'src/app/globals.css', 'Move Tailwind config + design tokens'],
-            ['src/assets/', 'public/ or src/assets/', 'Static assets — adjust import paths'],
-            ['tailwind.config.ts', 'tailwind.config.ts', 'Merge with Next.js generated config'],
-          ]}
-        />
-      </DocSection>
-
-      <DocSection title="Step 3: Convert Pages to App Router">
-        <CodeBlock title="src/app/page.tsx">{`'use client';
-
-import { useGameStore } from '@/store/gameStore';
-import { HomeScreen } from '@/components/home/HomeScreen';
-import { LobbyScreen } from '@/components/lobby/LobbyScreen';
-import { GameBoard } from '@/components/game/GameBoard';
-import { ScoringScreen } from '@/components/scoring/ScoringScreen';
-import { HelpModal } from '@/components/game/HelpModal';
-
-export default function Home() {
-  const screen = useGameStore((s) => s.screen);
-
-  return (
-    <>
-      {screen === 'home' && <HomeScreen />}
-      {screen === 'lobby' && <LobbyScreen />}
-      {screen === 'game' && <GameBoard />}
-      {screen === 'scoring' && <ScoringScreen />}
-      <HelpModal />
-    </>
-  );
-}`}</CodeBlock>
-        <p className="mt-3">
-          <strong>Key:</strong> The <code className="rounded bg-muted px-1.5 py-0.5 text-xs">&apos;use client&apos;</code> directive
-          is required because the game uses Zustand, Framer Motion, and browser APIs (Web Audio).
-          Game state lives entirely on the client — no server components needed for gameplay.
-        </p>
-      </DocSection>
-
-      <DocSection title="Step 4: Create Docs Route">
-        <CodeBlock title="src/app/docs/page.tsx">{`'use client';
-
-import { DocsLayout } from '@/components/docs/DocsLayout';
-
-export default function DocsPage() {
-  return <DocsLayout />;
-}`}</CodeBlock>
-        <p>
-          In Next.js, each route is a folder with a <code className="rounded bg-muted px-1.5 py-0.5 text-xs">page.tsx</code>.
-          Remove <code className="rounded bg-muted px-1.5 py-0.5 text-xs">react-router-dom</code> and replace
-          {' '}<code className="rounded bg-muted px-1.5 py-0.5 text-xs">{'<Link>'}</code> imports
-          with <code className="rounded bg-muted px-1.5 py-0.5 text-xs">next/link</code>.
-        </p>
-      </DocSection>
-
-      <DocSection title="Step 5: Path Alias & Environment Variables">
-        <CodeBlock title="tsconfig.json">{`{
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"]   // Same alias as Vite
-    }
-  }
-}`}</CodeBlock>
-        <CodeBlock title=".env.local">{`# Vite uses VITE_ prefix, Next.js uses NEXT_PUBLIC_
-NEXT_PUBLIC_DEBUG_MODE=true
-NEXT_PUBLIC_IS_ONLINE=false`}</CodeBlock>
-        <p className="mt-3">
-          <strong>Search & replace</strong> all <code className="rounded bg-muted px-1.5 py-0.5 text-xs">import.meta.env.VITE_</code> with{' '}
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">process.env.NEXT_PUBLIC_</code>.
-        </p>
-      </DocSection>
-
-      <DocSection title="Step 6: Cleanup">
-        <ul className="list-inside list-disc space-y-1.5">
-          <li>Remove <code className="rounded bg-muted px-1.5 py-0.5 text-xs">react-router-dom</code> — use Next.js file-based routing</li>
-          <li>Remove <code className="rounded bg-muted px-1.5 py-0.5 text-xs">vite.config.ts</code>, <code className="rounded bg-muted px-1.5 py-0.5 text-xs">vitest.config.ts</code> — use <code className="rounded bg-muted px-1.5 py-0.5 text-xs">next.config.js</code></li>
-          <li>Replace <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{'<Link to="...">'}</code> with <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{'<Link href="...">'}</code></li>
-          <li>Move <code className="rounded bg-muted px-1.5 py-0.5 text-xs">index.html</code> font links into <code className="rounded bg-muted px-1.5 py-0.5 text-xs">src/app/layout.tsx</code></li>
-          <li>Add <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{'<html>'}</code> and <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{'<body>'}</code> to layout</li>
-        </ul>
-      </DocSection>
-
-      <DocSection title="⚠️ Gotchas">
-        <ul className="list-inside list-disc space-y-1.5">
-          <li><strong>Zustand + SSR:</strong> Zustand works on the client. Wrap game pages with <code className="rounded bg-muted px-1.5 py-0.5 text-xs">&apos;use client&apos;</code>.</li>
-          <li><strong>Web Audio API:</strong> Only available in the browser. The <code className="rounded bg-muted px-1.5 py-0.5 text-xs">sounds.ts</code> file already handles this gracefully.</li>
-          <li><strong>Framer Motion:</strong> Requires client components. All animation components need <code className="rounded bg-muted px-1.5 py-0.5 text-xs">&apos;use client&apos;</code>.</li>
-          <li><strong>localStorage:</strong> <code className="rounded bg-muted px-1.5 py-0.5 text-xs">settingsStore.ts</code> uses <code className="rounded bg-muted px-1.5 py-0.5 text-xs">zustand/persist</code> which accesses localStorage — client-only.</li>
-        </ul>
-      </DocSection>
-    </>
-  );
-}
-
 function RoadmapDocs() {
   return (
     <>
-      <DocSection title="✅ Implemented Features">
+      <DocSection title="Implemented Features" icon={<CheckCircle2 className="h-6 w-6 text-green-500" />}>
         <ul className="list-inside list-disc space-y-1.5">
           <li>Full offline gameplay vs bots (2–8 players)</li>
+          <li>Next.js Migration (App Router)</li>
           <li>3 bot difficulty tiers with memory simulation</li>
-          <li>All card effects: peek own, peek opponent, blind swap, semi-blind swap</li>
+          <li>All card effects: peek own, peek opponent, blind swap, semi-blind swap, full vision swap</li>
           <li>Tap window mechanic with penalty system</li>
           <li>KABOO calling with final round logic</li>
           <li>Scoring with KABOO caller bonus/penalty</li>
+          <li>Multi-round scoring with target score tracking</li>
+          <li>Matt's Pairs Rule (discard matching pairs)</li>
+          <li>Persistent stats (games played, win rate, best score)</li>
+          <li>Undo system (offline mode)</li>
+          <li>Sound Toggle per Effect (granular control)</li>
+          <li>Theme support (Light/Dark/System)</li>
           <li>Card flip animations with 3D perspective</li>
           <li>Flying card animations between positions</li>
           <li>Procedural sound effects (Web Audio API)</li>
@@ -323,22 +220,18 @@ function RoadmapDocs() {
         <DocTable
           headers={['Feature', 'Priority', 'Description']}
           rows={[
-            ['Online Multiplayer', 'High', 'Real-time WebSocket multiplayer via Supabase Realtime or Socket.io. Room creation and joining UI exists but is disabled (VITE_IS_ONLINE flag).'],
-            ['Full Vision Swap (Q)', 'Medium', 'The full_vision_swap effect type is defined but not fully wired. Queen currently uses semi_blind_swap.'],
-            ['Matt\'s Pairs Rule', 'Medium', 'Setting exists in GameSettings but the rule (matching pairs discard) is not implemented in game logic.'],
-            ['Multi-Round Scoring', 'Medium', 'totalScore field exists on Player but multi-round tracking with a target score (e.g., 100 pts) is not built.'],
-            ['Sound Toggle per Effect', 'Low', 'Global volume exists but no per-sound-type toggle. Some actions still lack sound feedback.'],
+            ['Online Multiplayer', 'High', 'Real-time WebSocket multiplayer via Supabase Realtime or Socket.io. Room creation and joining UI exists but is disabled (NEXT_PUBLIC_IS_ONLINE flag).'],
             ['Mobile Touch Optimization', 'Medium', 'UI is responsive but touch targets and drag interactions need polish for mobile.'],
-            ['Replay / Undo System', 'Low', 'No action history or undo capability. Would need action log refactor.'],
             ['Animations Config', 'Low', 'animationsEnabled setting exists but isn\'t wired to all animations.'],
-            ['Persistent Stats', 'Low', 'No win/loss tracking across sessions.'],
-            ['Theming / Light Mode', 'Low', 'Dark-mode-only currently. CSS tokens support light mode but no toggle exists.'],
           ]}
         />
       </DocSection>
 
-      <DocSection title="🏛️ Architecture Decisions">
+      <DocSection title="Architecture Decisions" icon={<Landmark className="h-6 w-6" />}>
         <ul className="list-inside list-disc space-y-2">
+          <li>
+            <strong>Next.js App Router:</strong> Leverages modern React features, file-based routing, and built-in optimization.
+          </li>
           <li>
             <strong>Zustand over Redux:</strong> Simpler API, no boilerplate. Slices pattern provides
             modularity without Redux Toolkit&apos;s complexity.
@@ -349,7 +242,7 @@ function RoadmapDocs() {
           </li>
           <li>
             <strong>No external sound files:</strong> Web Audio API generates all sounds procedurally,
-            reducing bundle size and eliminating asset loading issues.
+            reducing npmdle size and eliminating asset loading issues.
           </li>
           <li>
             <strong>State machine pattern:</strong> Game phases enforce valid transitions, preventing
@@ -362,12 +255,12 @@ function RoadmapDocs() {
         </ul>
       </DocSection>
 
-      <DocSection title="📝 Environment Variables">
+      <DocSection title="Environment Variables" icon={<FileText className="h-6 w-6" />}>
         <DocTable
           headers={['Variable', 'Type', 'Description']}
           rows={[
-            ['VITE_DEBUG_MODE', 'boolean', 'Enables floating DEV tools button for layout debugging'],
-            ['VITE_IS_ONLINE', 'boolean', 'Enables online multiplayer UI (Create/Join game). Currently disabled.'],
+            ['NEXT_PUBLIC_DEBUG_MODE', 'boolean', 'Enables floating DEV tools button for layout debugging'],
+            ['NEXT_PUBLIC_IS_ONLINE', 'boolean', 'Enables online multiplayer UI (Create/Join game). Currently disabled.'],
           ]}
         />
       </DocSection>
