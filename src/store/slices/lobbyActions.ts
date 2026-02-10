@@ -5,6 +5,9 @@ import { createDeck, shuffleDeck, dealCards } from '@/lib/cardUtils';
 import { createBotMemory, botInitialPeek, botRememberCard } from '@/lib/botAI';
 import { INITIAL_STATE } from '../gameStore';
 import { useReplayStore } from '../replayStore';
+import { gameApi } from '@/services/gameApi';
+import { supabase } from '@/lib/supabase';
+import { toast } from '@/components/ui/use-toast';
 
 export function createLobbyActions(set: StoreSet, get: StoreGet) {
   return {
@@ -22,26 +25,85 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         return { settings: newSettings };
       }),
 
-    createGame: () => {
-      const { playerName, settings } = get();
-      const players = createMockPlayers(settings.numPlayers, playerName);
-      set({
-        screen: 'lobby',
-        gameMode: 'online',
-        roomCode: generateRoomCode(),
-        players,
-      });
+    createGame: async () => {
+      const { playerName } = get();
+      if (!playerName) return;
+
+      try {
+        // Ensure Auth with robust session check
+        let { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.log('[Lobby] No session, signing in anonymously...');
+          const { data, error } = await supabase.auth.signInAnonymously();
+          if (error) throw error;
+          session = data.session;
+        } else {
+          // Optional: Refresh session to ensure token is fresh
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError && refreshData.session) {
+            session = refreshData.session;
+          }
+        }
+        
+        if (session?.user?.id) {
+          set({ myPlayerId: session.user.id });
+        }
+
+        const { gameId, roomCode } = await gameApi.createGame();
+        set({
+          screen: 'lobby',
+          gameMode: 'online',
+          roomCode,
+          gameId,
+          players: [], // Will be synced via subscription
+        });
+      } catch (error) {
+        console.error('Failed to create game:', error);
+        toast({
+          title: 'Failed to create game',
+          description: error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive',
+        });
+      }
     },
 
-    joinGame: () => {
-      const { playerName, settings } = get();
-      const players = createMockPlayers(settings.numPlayers, playerName);
-      set({
-        screen: 'lobby',
-        gameMode: 'online',
-        roomCode: generateRoomCode(),
-        players: players.map((p, i) => ({ ...p, isHost: i !== 0 ? p.isHost : false })),
-      });
+    joinGame: async (roomCode: string) => {
+      const { playerName } = get();
+      if (!playerName) return;
+
+      // Ensure Auth
+      let userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error) {
+          console.error('Auth failed:', error);
+          return;
+        }
+        userId = data.user?.id;
+      }
+
+      if (userId) {
+        set({ myPlayerId: userId });
+      }
+
+      try {
+        const { gameId } = await gameApi.joinGame(roomCode);
+        set({
+          screen: 'lobby',
+          gameMode: 'online',
+          roomCode, // Use the provided room code
+          gameId,
+          players: [], // Will be synced via subscription
+        });
+      } catch (error) {
+        console.error('Failed to join game:', error);
+        toast({
+          title: 'Failed to join game',
+          description: error instanceof Error ? error.message : 'Please check the room code.',
+          variant: 'destructive',
+        });
+      }
     },
 
     startOffline: () => {

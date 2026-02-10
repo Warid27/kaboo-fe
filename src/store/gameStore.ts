@@ -32,6 +32,7 @@ export interface GameStore {
 
   // Player
   playerName: string;
+  myPlayerId: string;
   setPlayerName: (name: string) => void;
 
   // Lobby
@@ -88,8 +89,8 @@ export interface GameStore {
   roundNumber: number;
 
   // Actions
-  createGame: () => void;
-  joinGame: () => void;
+  createGame: () => Promise<void>;
+  joinGame: (roomCode: string) => Promise<void>;
   startOffline: () => void;
   startGame: () => void;
   peekCard: (cardId: string) => void;
@@ -160,6 +161,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   gameMode: 'offline',
   gameId: '',
   playerName: '',
+  myPlayerId: '',
   roomCode: '',
   players: [],
   settings: { turnTimer: '30', mattsPairsRule: false, useEffectCards: true, numPlayers: 4, botDifficulty: 'medium', targetScore: '100' },
@@ -168,8 +170,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   navigateTo: (screen) => set({ screen }),
   setPlayerName: (playerName) => set({ playerName }),
   setIsPaused: (isPaused) => set({ isPaused }),
-  syncFromRemote: (state) => console.log('Syncing from remote', state),
-  setMyPlayerId: (id) => console.log('Setting my player ID', id),
+  syncFromRemote: (state) => set({
+    // Merge remote state
+    // For now just partial updates might be tricky, but let's assume full state sync
+    // We might need a more sophisticated merge strategy later
+    ...state,
+  }),
+  setMyPlayerId: (id) => set({ myPlayerId: id }),
 
   addFlyingCard: (card, fromAnchor, toAnchor) => {
     const id = `fly-${++flyIdCounter}`;

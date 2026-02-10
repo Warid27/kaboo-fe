@@ -21,15 +21,15 @@ export function HomeScreen() {
   const [showStats, setShowStats] = useState(false);
   const isOnline = process.env.NEXT_PUBLIC_IS_ONLINE === 'true';
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!playerName.trim()) return;
-    createGame();
+    await createGame();
     router.push('/lobby');
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!playerName.trim()) return;
-    joinGame();
+    await joinGame(joinCode);
     router.push('/lobby');
   };
 
