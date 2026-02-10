@@ -40,6 +40,18 @@ export function useOnlineGame() {
           fetchGameState(gameId);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'game_players',
+          filter: `game_id=eq.${gameId}`,
+        },
+        (payload) => {
+           fetchGameState(gameId);
+         }
+      )
       .subscribe();
 
     const fetchGameState = async (id: string) => {
