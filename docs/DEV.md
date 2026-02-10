@@ -28,13 +28,13 @@
 
 ## Tech Stack
 
-- **Framework:** Vite + React 18
+- **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS + Shadcn UI
 - **State Management:** Zustand
 - **Animations:** Framer Motion
 - **Testing:** Vitest + React Testing Library
-- **Routing:** React Router DOM
+- **Routing:** Next.js App Router
 
 ---
 
