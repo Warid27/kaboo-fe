@@ -367,7 +367,7 @@ export default function GameDevPage() {
         finalRoundTurnsLeft={null}
         tapState={showTapWindow ? { phase: 'window', selectedCardIds: [], swapTargets: [], swapsRemaining: 0 } : null}
          showEffectOverlay={showEffectOverlay}
-         instruction="Debug Mode: Layout Preview"
+         instruction={{ id: 'debug-instruction', content: "Debug Mode: Layout Preview" }}
          roundNumber={1}
          turnLog={showTurnLog ? MOCK_LOG : []}
          onPlayerCardClick={handleCardClick}
