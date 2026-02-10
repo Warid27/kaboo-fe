@@ -126,3 +126,7 @@ export interface TapState {
   swapTargets: number[];
   swapsRemaining: number;
 }
+
+// ── Game State ──
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type GameState = any;

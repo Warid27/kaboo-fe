@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type {
   Screen, GamePhase, TurnPhase, EffectType,
-  Card, Player, GameSettings, TurnLogEntry, TapState,
+  Card, Player, GameSettings, TurnLogEntry, TapState, GameState,
 } from '@/types/game';
 import type { BotMemory } from '@/lib/botAI';
 import { createLobbyActions } from './slices/lobbyActions';
@@ -26,6 +26,9 @@ export interface GameStore {
 
   // Mode
   gameMode: GameMode;
+  gameId: string;
+  syncFromRemote: (state: GameState) => void;
+  setMyPlayerId: (id: string) => void;
 
   // Player
   playerName: string;
@@ -155,6 +158,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // Initial state
   screen: 'home',
   gameMode: 'offline',
+  gameId: '',
   playerName: '',
   roomCode: '',
   players: [],
@@ -164,6 +168,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   navigateTo: (screen) => set({ screen }),
   setPlayerName: (playerName) => set({ playerName }),
   setIsPaused: (isPaused) => set({ isPaused }),
+  syncFromRemote: (state) => console.log('Syncing from remote', state),
+  setMyPlayerId: (id) => console.log('Setting my player ID', id),
 
   addFlyingCard: (card, fromAnchor, toAnchor) => {
     const id = `fly-${++flyIdCounter}`;
