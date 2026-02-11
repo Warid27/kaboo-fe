@@ -1,10 +1,59 @@
 import type { StoreGet, StoreSet } from '../helpers';
+import { gameApi } from '@/services/gameApi';
+import { toast } from '@/components/ui/use-toast';
 
 export function createEffectActions(set: StoreSet, get: StoreGet) {
   return {
-    resolveEffect: (targetCardId: string) => {
-      const { effectType, effectStep, players } = get();
+    resolveEffect: async (targetCardId: string) => {
+      const { effectType, effectStep, players, gameMode, gameId } = get();
       if (!effectType) return;
+
+      if (gameMode === 'online') {
+          // PEEK OWN
+          if (effectType === 'peek_own') {
+              const player = players[0];
+              const cardIndex = player.cards.findIndex(c => c.id === targetCardId);
+              if (cardIndex !== -1) {
+                  try {
+                    await gameApi.playMove(gameId, { type: 'PEEK_OWN', cardIndex });
+                    // If successful, frontend knows the card, just trigger peek animation
+                    get().peekCard(targetCardId); 
+                  } catch {
+                    toast({ title: 'Effect Failed', description: 'Failed to peek own card.', variant: 'destructive' });
+                  }
+              }
+              return;
+          }
+          // PEEK OPPONENT
+          if (effectType === 'peek_opponent') {
+              // Find target player and card index
+              let targetPlayerId: string | undefined;
+              let cardIndex = -1;
+              
+              players.forEach(p => {
+                  const idx = p.cards.findIndex(c => c.id === targetCardId);
+                  if (idx !== -1) {
+                      targetPlayerId = p.id;
+                      cardIndex = idx;
+                  }
+              });
+
+              if (targetPlayerId && cardIndex !== -1 && targetPlayerId !== players[0].id) {
+                   try {
+                     await gameApi.playMove(gameId, { type: 'SPY_OPPONENT', targetPlayerId, cardIndex });
+                     // If result contains card info, we could show it.
+                     // For now, trigger peek animation (might show card back if value not present)
+                     get().peekCard(targetCardId);
+                   } catch {
+                     toast({ title: 'Effect Failed', description: 'Failed to peek opponent card.', variant: 'destructive' });
+                   }
+              }
+              return;
+          }
+          
+          // For Swaps, we continue to use local selection logic until confirmEffect is called.
+          // Fall through to existing selection logic below.
+      }
 
       if (effectType === 'peek_own') {
         const isOwnCard = players[0].cards.some((c) => c.id === targetCardId);
@@ -86,8 +135,8 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
       }
     },
 
-    confirmEffect: () => {
-      const { effectType, selectedCards, effectPreviewCardIds, players, memorizedCards } = get();
+    confirmEffect: async () => {
+      const { effectType, selectedCards, effectPreviewCardIds, players, memorizedCards, gameMode, gameId } = get();
 
       let card1Id: string | undefined;
       let card2Id: string | undefined;
@@ -106,6 +155,42 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
         card2Id = effectPreviewCardIds[1];
       } else {
         return;
+      }
+
+      if (gameMode === 'online') {
+          // Identify players and indices for card1 and card2
+          let c1Info: { playerId: string; cardIndex: number } | null = null;
+          let c2Info: { playerId: string; cardIndex: number } | null = null;
+
+          players.forEach(p => {
+              p.cards.forEach((c, i) => {
+                  if (c.id === card1Id) c1Info = { playerId: p.id, cardIndex: i };
+                  if (c.id === card2Id) c2Info = { playerId: p.id, cardIndex: i };
+              });
+          });
+
+          if (c1Info && c2Info) {
+              try {
+                  await gameApi.playMove(gameId, { 
+                      type: 'SWAP_ANY', 
+                      card1: c1Info, 
+                      card2: c2Info 
+                  });
+              } catch {
+                  toast({ title: 'Effect Failed', description: 'Failed to perform swap.', variant: 'destructive' });
+              }
+          }
+          // Reset local selection state is handled by subscription updates usually,
+          // but we should clear selection overlays locally.
+           set({
+            effectType: null,
+            effectStep: null,
+            showEffectOverlay: false,
+            selectedCards: [],
+            peekedCards: [],
+            effectPreviewCardIds: [],
+          });
+          return;
       }
 
       const updatedPlayers = [...players];

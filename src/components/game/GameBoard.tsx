@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
-import { useDevStore } from '@/store/devStore';
 import { GameBoardLayout } from './GameBoardLayout';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useGameInstruction } from './useGameInstruction';
@@ -36,6 +34,7 @@ export function GameBoard() {
     turnLog,
     flyingCards,
     drawCard,
+    drawFromDiscard,
     peekCard,
     selectCard,
     resolveEffect,
@@ -120,6 +119,12 @@ export function GameBoard() {
     }
   };
 
+  const handleDrawFromDiscard = () => {
+    if (currentPlayerIndex === 0 && turnPhase === 'draw' && gamePhase === 'playing') {
+      drawFromDiscard();
+    }
+  };
+
   return (
     <GameBoardLayout
       players={players}
@@ -151,6 +156,7 @@ export function GameBoard() {
       onPlayerCardClick={handlePlayerCardClick}
       onOpponentCardClick={handleOpponentCardClick}
       onDrawClick={handleDrawClick}
+      onDrawFromDiscard={handleDrawFromDiscard}
       onCallKaboo={callKaboo}
       onSwapCard={swapCard}
       onDiscardHeldCard={discardHeldCard}

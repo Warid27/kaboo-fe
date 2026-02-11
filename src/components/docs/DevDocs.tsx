@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Folder, Blocks, FlaskConical, CheckCircle2, Construction, Landmark, FileText, Github } from 'lucide-react';
+import { Folder, Blocks, FlaskConical, CheckCircle2, Landmark, FileText, Github } from 'lucide-react';
 import { DocSection, CodeBlock, DocTable, Badge } from './DocSection';
 const SUB_TABS = [
   { id: 'structure', label: 'Code Structure' },
@@ -200,7 +200,7 @@ function RoadmapDocs() {
           <li>KABOO calling with final round logic</li>
           <li>Scoring with KABOO caller bonus/penalty</li>
           <li>Multi-round scoring with target score tracking</li>
-          <li>Matt's Pairs Rule (discard matching pairs)</li>
+          <li>Matt&apos;s Pairs Rule (discard matching pairs)</li>
           <li>Persistent stats (games played, win rate, best score)</li>
           <li>Undo system (offline mode)</li>
           <li>Sound Toggle per Effect (granular control)</li>

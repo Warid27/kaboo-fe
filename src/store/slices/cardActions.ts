@@ -5,12 +5,20 @@ import { createBotMemory, botRememberCard, botForgetCard } from '@/lib/botAI';
 import { playDrawSound, playSwapSound, playDiscardSound, playEffectSound, playPeekSound } from '@/lib/sounds';
 import { useReplayStore } from '../replayStore';
 import { captureSnapshot } from '../snapshotHelper';
+import { gameApi } from '@/services/gameApi';
+import { toast } from '@/components/ui/use-toast';
 
 export function createCardActions(set: StoreSet, get: StoreGet) {
   return {
     peekCard: (cardId: string) => {
-      const { initialLooksRemaining, gamePhase, peekedCards, memorizedCards } = get();
+      const { initialLooksRemaining, gamePhase, peekedCards, memorizedCards, gameMode } = get();
 
+      // Online Peek Logic (TODO: Integrate PEEK_OWN / PEEK_OPPONENT via API if strictly enforced by backend)
+      // For now, if we assume PEEK is an effect result handled by backend state, we might just receive the card value.
+      // But if this is "initial look", backend might not restrict it yet or might expect 'PEEK_OWN'.
+      // For now, let's leave peekCard as local visual logic unless backend requires 'PEEK' action for initial look.
+      // Backend rules say: "PEEK_OWN" is an effect. Initial look is usually just frontend showing cards.
+      
       if (peekedCards.includes(cardId)) return;
 
       if (gamePhase === 'initial_look' && initialLooksRemaining > 0) {
@@ -32,7 +40,13 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
 
           if (current.initialLooksRemaining <= 0) {
             setTimeout(() => {
-              set({ gamePhase: 'playing', turnPhase: 'draw' });
+              if (gameMode === 'online') {
+                  // In online, we don't force local phase changes. 
+                  // We should tell the backend we are ready.
+                  get().readyToPlay();
+              } else {
+                  set({ gamePhase: 'playing', turnPhase: 'draw' });
+              }
             }, 500);
           }
         }, 2000);
@@ -50,9 +64,18 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       }
     },
 
-    drawCard: () => {
-      const { drawPile, turnPhase, currentPlayerIndex } = get();
+    drawCard: async () => {
+      const { drawPile, turnPhase, currentPlayerIndex, gameMode, gameId } = get();
       if (turnPhase !== 'draw' || drawPile.length === 0) return;
+
+      if (gameMode === 'online') {
+        try {
+            await gameApi.playMove(gameId, { type: 'DRAW_FROM_DECK' });
+        } catch {
+            toast({ title: 'Action Failed', description: 'Failed to draw card.', variant: 'destructive' });
+        }
+        return;
+      }
 
       const drawnCard = { ...drawPile[0], faceUp: true };
       get().addFlyingCard(drawnCard, 'draw-pile', 'held-card');
@@ -66,13 +89,47 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       useReplayStore.getState().pushSnapshot('draw', captureSnapshot(get()));
     },
 
-    swapCard: (playerCardId: string) => {
-      const { heldCard, players, currentPlayerIndex, discardPile, botMemories, gameMode } = get();
+    drawFromDiscard: async () => {
+      const { discardPile, turnPhase, currentPlayerIndex, gameMode, gameId } = get();
+      if (turnPhase !== 'draw' || discardPile.length === 0) return;
+
+      if (gameMode === 'online') {
+        try {
+            await gameApi.playMove(gameId, { type: 'DRAW_FROM_DISCARD' });
+        } catch {
+            toast({ title: 'Action Failed', description: 'Failed to draw from discard.', variant: 'destructive' });
+        }
+        return;
+      }
+
+      const card = { ...discardPile[discardPile.length - 1], faceUp: true };
+      get().addFlyingCard(card, 'discard-pile', 'held-card');
+      set({
+        heldCard: card,
+        discardPile: discardPile.slice(0, -1),
+        turnPhase: 'action',
+      });
+      addLog(get, set, currentPlayerIndex, `drew from discard`);
+      playDrawSound();
+      useReplayStore.getState().pushSnapshot('drawFromDiscard', captureSnapshot(get()));
+    },
+
+    swapCard: async (playerCardId: string) => {
+      const { heldCard, players, currentPlayerIndex, discardPile, botMemories, gameMode, gameId } = get();
       if (!heldCard) return;
 
       const player = players[currentPlayerIndex];
       const cardIndex = player.cards.findIndex((c) => c.id === playerCardId);
       if (cardIndex === -1) return;
+
+      if (gameMode === 'online') {
+          try {
+              await gameApi.playMove(gameId, { type: 'SWAP_WITH_OWN', cardIndex });
+          } catch {
+              toast({ title: 'Action Failed', description: 'Failed to swap card.', variant: 'destructive' });
+          }
+          return;
+      }
 
       const oldCard = { ...player.cards[cardIndex], faceUp: true };
       get().addFlyingCard(oldCard, `card-${playerCardId}`, 'discard-pile');
@@ -124,9 +181,18 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       useReplayStore.getState().pushSnapshot('swap', captureSnapshot(get()));
     },
 
-    discardHeldCard: () => {
-      const { heldCard, discardPile, currentPlayerIndex } = get();
+    discardHeldCard: async () => {
+      const { heldCard, discardPile, currentPlayerIndex, gameMode, gameId } = get();
       if (!heldCard) return;
+
+      if (gameMode === 'online') {
+          try {
+              await gameApi.playMove(gameId, { type: 'DISCARD_DRAWN' });
+          } catch {
+              toast({ title: 'Action Failed', description: 'Failed to discard card.', variant: 'destructive' });
+          }
+          return;
+      }
 
       const discarded = { ...heldCard, faceUp: true };
       get().addFlyingCard(discarded, 'held-card', 'discard-pile');

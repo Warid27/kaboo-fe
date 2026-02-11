@@ -89,19 +89,19 @@ export default function GameDevPage() {
   // And if we want to simulate "It is Player X's turn", we set the layout's currentPlayerIndex to 0.
 
   const handleDraw = () => {
-    console.log('Draw clicked');
+    // console.log('Draw clicked');
     setShowHeldCard(true);
     setTurnPhase('action');
   };
 
   const handleCallKaboo = () => {
-    console.log('Kaboo called');
+    // console.log('Kaboo called');
     setShowKabooAnnouncement(true);
     setTimeout(() => setShowKabooAnnouncement(false), 3000);
   };
 
   const handleSwap = () => {
-    console.log('Swap clicked');
+    // console.log('Swap clicked');
     if (selectedCards.length > 0) {
       // Simulate swap: just log and clear held card for now
       setShowHeldCard(false);
@@ -111,13 +111,13 @@ export default function GameDevPage() {
   };
 
   const handleDiscardHeld = () => {
-    console.log('Discard held card');
+    // console.log('Discard held card');
     setShowHeldCard(false);
     // Optionally advance phase or stay in action
   };
 
   const handleCardClick = (id: string) => {
-    console.log('Card clicked:', id);
+    // console.log('Card clicked:', id);
     setSelectedCards((prev) => 
       prev.includes(id) ? prev.filter((cid) => cid !== id) : [id] // Single select for now
     );
@@ -371,12 +371,12 @@ export default function GameDevPage() {
          roundNumber={1}
          turnLog={showTurnLog ? MOCK_LOG : []}
          onPlayerCardClick={handleCardClick}
-        onOpponentCardClick={(id) => console.log('Opponent card clicked:', id)}
+        onOpponentCardClick={() => {}}
         onDrawClick={handleDraw}
         onCallKaboo={handleCallKaboo}
         onSwapCard={handleSwap}
         onDiscardHeldCard={handleDiscardHeld}
-        onDiscardPair={(id1, id2) => console.log('Discard pair', id1, id2)}
+        onDiscardPair={() => {}}
       />
     </div>
   );

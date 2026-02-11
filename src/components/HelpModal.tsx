@@ -13,8 +13,7 @@ import {
   Brain,
   Eye,
   RefreshCw,
-  Clock,
-  ArrowRight
+  Clock
 } from 'lucide-react';
 
 const TABS = ['Rules', 'Game Flow', 'Strategy'] as const;

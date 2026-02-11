@@ -16,7 +16,10 @@ export function useOnlineGame() {
       } else {
         const { data: { user: newUser }, error } = await supabase.auth.signInAnonymously();
         if (newUser) setMyPlayerId(newUser.id);
-        if (error) console.error('Auth failed:', error);
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error('Auth failed:', error);
+        }
       }
     };
     ensureAuth();
@@ -48,7 +51,7 @@ export function useOnlineGame() {
           table: 'game_players',
           filter: `game_id=eq.${gameId}`,
         },
-        (payload) => {
+        () => {
            fetchGameState(gameId);
          }
       )
@@ -59,6 +62,7 @@ export function useOnlineGame() {
         const { game_state } = await gameApi.getGameState(id);
         syncFromRemote(game_state);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to fetch game state:', error);
       }
     };

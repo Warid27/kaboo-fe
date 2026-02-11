@@ -53,7 +53,7 @@ export function DrawPile({ cardsRemaining, isHighlighted, onClick }: DrawPilePro
           <div
             key={offset}
             className={cn(
-              'absolute rounded-xl border-2 bg-muted',
+              'absolute rounded border-2 bg-muted',
               isHighlighted ? 'border-primary/40' : 'border-border/20',
             )}
             style={{

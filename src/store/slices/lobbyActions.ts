@@ -1,6 +1,6 @@
 import type { GameStore } from '../gameStore';
 import type { StoreGet, StoreSet } from '../helpers';
-import { createMockPlayers, generateRoomCode } from '../helpers';
+import { createMockPlayers } from '../helpers';
 import { createDeck, shuffleDeck, dealCards } from '@/lib/cardUtils';
 import { createBotMemory, botInitialPeek, botRememberCard } from '@/lib/botAI';
 import { INITIAL_STATE } from '../gameStore';
@@ -34,7 +34,6 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         let { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          console.log('[Lobby] No session, signing in anonymously...');
           const { data, error } = await supabase.auth.signInAnonymously();
           if (error) throw error;
           session = data.session;
@@ -50,16 +49,25 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
           set({ myPlayerId: session.user.id });
         }
 
-        const { gameId, roomCode } = await gameApi.createGame();
+        const { gameId, roomCode } = await gameApi.createGame(playerName);
+        console.log('[Kaboo Debug] createGame success:', { gameId, roomCode });
+        
+        // Subscribe to game updates
+        const subscription = gameApi.subscribeToGame(gameId, (state) => {
+          console.log('[Kaboo Debug] Subscription update triggering syncFromRemote');
+          get().syncFromRemote(state);
+        });
+
         set({
           screen: 'lobby',
           gameMode: 'online',
           roomCode,
           gameId,
           players: [], // Will be synced via subscription
+          subscription,
         });
+        console.log('[Kaboo Debug] Lobby state set locally');
       } catch (error) {
-        console.error('Failed to create game:', error);
         toast({
           title: 'Failed to create game',
           description: error instanceof Error ? error.message : 'Please try again.',
@@ -77,7 +85,6 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       if (!userId) {
         const { data, error } = await supabase.auth.signInAnonymously();
         if (error) {
-          console.error('Auth failed:', error);
           return;
         }
         userId = data.user?.id;
@@ -88,22 +95,90 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       }
 
       try {
-        const { gameId } = await gameApi.joinGame(roomCode);
+        const { gameId } = await gameApi.joinGame(roomCode, playerName);
+        
+        // Subscribe to game updates
+        const subscription = gameApi.subscribeToGame(gameId, (state) => {
+          get().syncFromRemote(state);
+        });
+
         set({
           screen: 'lobby',
           gameMode: 'online',
-          roomCode, // Use the provided room code
+          roomCode,
           gameId,
           players: [], // Will be synced via subscription
+          subscription,
         });
       } catch (error) {
-        console.error('Failed to join game:', error);
         toast({
           title: 'Failed to join game',
-          description: error instanceof Error ? error.message : 'Please check the room code.',
+          description: error instanceof Error ? error.message : 'Please try again.',
           variant: 'destructive',
         });
       }
+    },
+
+    toggleReady: async () => {
+      const { gameId, myPlayerId, players } = get();
+      if (!gameId || !myPlayerId) return;
+
+      const me = players.find(p => p.id === myPlayerId);
+      const newStatus = !me?.isReady;
+
+      // Optimistic update
+      set(state => ({
+        players: state.players.map(p => 
+          p.id === myPlayerId ? { ...p, isReady: newStatus } : p
+        )
+      }));
+
+      try {
+        await gameApi.toggleReady(gameId, newStatus);
+      } catch (error) {
+        // Revert
+        set(state => ({
+          players: state.players.map(p => 
+            p.id === myPlayerId ? { ...p, isReady: !newStatus } : p
+          )
+        }));
+        toast({
+          title: 'Error updating ready status',
+          description: error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive'
+        });
+      }
+    },
+
+    kickPlayer: async (playerId: string) => {
+      const { gameId } = get();
+      if (!gameId) return;
+
+      try {
+        await gameApi.kickPlayer(gameId, playerId);
+        toast({
+          title: 'Player kicked',
+          description: 'The player has been removed from the game.',
+        });
+        // We don't need to manually update state here as the subscription will handle it
+      } catch (error) {
+        toast({
+          title: 'Failed to kick player',
+          description: error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive'
+        });
+      }
+    },
+
+    checkGameState: async () => {
+        const { gameId } = get();
+        if (!gameId) return;
+        try {
+            const { game_state } = await gameApi.getGameState(gameId);
+            get().syncFromRemote(game_state);
+        } catch (e) {
+            console.error("Polling error", e);
+        }
     },
 
     startOffline: () => {
@@ -117,8 +192,25 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       });
     },
 
-    startGame: () => {
-      const { players, settings, gameMode } = get();
+    startGame: async () => {
+      const { players, settings, gameMode, gameId } = get();
+
+      if (gameMode === 'online') {
+        if (!gameId) return;
+        try {
+          await gameApi.startGame(gameId);
+          // Set local screen immediately to avoid flicker, though syncFromRemote will also set it
+          set({ screen: 'game' });
+        } catch {
+          toast({
+            title: 'Failed to start game',
+            description: 'Could not start the game on server.',
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
+
       const deck = shuffleDeck(createDeck());
       const { hands, remaining } = dealCards(deck, players.length, 4);
 
@@ -183,6 +275,21 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       }, 2000);
     },
 
+    readyToPlay: async () => {
+      const { gameId, gameMode } = get();
+      if (gameMode === 'online') {
+        try {
+          await gameApi.playMove(gameId, { type: 'READY_TO_PLAY' });
+        } catch (error) {
+          console.error('Failed to set ready state', error);
+        }
+        return;
+      }
+
+      // Offline mode logic (auto-transition)
+      set({ gamePhase: 'playing', turnPhase: 'draw' });
+    },
+
     playAgain: () => {
       const { players, matchOver } = get();
       if (matchOver) {
@@ -209,12 +316,23 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     backToLobby: () => {
+      const { gameId, gameMode, subscription } = get();
+
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+
+      if (gameMode === 'online' && gameId) {
+        gameApi.leaveGame(gameId).catch((e) => console.error('Failed to leave game', e));
+      }
+
       set({
         screen: 'home',
         players: [],
         roomCode: '',
         ...INITIAL_STATE,
         roundNumber: 1,
+        subscription: null,
       });
     },
   };

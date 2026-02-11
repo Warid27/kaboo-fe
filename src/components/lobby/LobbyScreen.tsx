@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
@@ -9,18 +10,39 @@ import { PlayerList } from './PlayerList';
 import { Bot, Zap } from 'lucide-react';
 
 export function LobbyScreen() {
-  const { roomCode, players, startGame, backToLobby, gameMode } = useGameStore();
-  const router = useRouter();
+  const { roomCode, players, startGame, backToLobby, gameMode, myPlayerId, toggleReady, checkGameState } = useGameStore();
+  
   const isOffline = gameMode === 'offline';
+  const me = players.find(p => p.id === myPlayerId);
+  // In online mode, check the player's isHost property which is set by the store based on backend order
+  const isHost = isOffline || (me?.isHost ?? false);
+  
+  const isReady = me?.isReady;
+
+  // Check if all other players are ready (host is ready by definition of being able to click start)
+  const otherPlayers = players.filter(p => !p.isHost);
+  const allOthersReady = otherPlayers.length > 0 && otherPlayers.every(p => p.isReady);
+  const canStart = isOffline || (players.length >= 2 && allOthersReady);
+
+  useEffect(() => {
+    if (gameMode === 'offline') return;
+    
+    // Initial check
+    checkGameState();
+
+    const interval = setInterval(() => {
+        checkGameState();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [gameMode, checkGameState]);
 
   const handleBack = () => {
     backToLobby();
-    router.push('/');
   };
 
-  const handleStart = () => {
-    startGame();
-    router.push('/game');
+  const handleStart = async () => {
+    await startGame();
   };
 
   return (
@@ -120,12 +142,12 @@ export function LobbyScreen() {
             />
           ))}
           <span className="ml-2 font-body text-sm text-muted-foreground">
-            {isOffline ? 'Bots are warming up...' : 'Shuffling cards...'}
+            {isOffline ? 'Bots are warming up...' : 'Waiting for players...'}
           </span>
         </motion.div>
 
         {/* Settings */}
-        <GameSettings />
+        <GameSettings isHost={isHost} />
 
         {/* Start Button */}
         <motion.div
@@ -133,20 +155,43 @@ export function LobbyScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, type: 'spring' }}
         >
-          <Button
-            onClick={handleStart}
-            className="h-14 w-full rounded-xl font-display text-xl font-bold gradient-gold text-primary-foreground glow-gold hover:brightness-110 transition-all gap-2"
-          >
-            {isOffline ? (
-              <>
-                <Bot className="h-6 w-6" /> Start vs Bots
-              </>
-            ) : (
-              <>
-                <Zap className="h-6 w-6 fill-current" /> Start Game
-              </>
-            )}
-          </Button>
+          {isHost ? (
+            <Button
+              onClick={handleStart}
+              disabled={!canStart}
+              className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
+                canStart
+                  ? 'gradient-gold text-primary-foreground glow-gold hover:brightness-110'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-70'
+              }`}
+            >
+              {isOffline ? (
+                <>
+                  <Bot className="h-6 w-6" /> Start vs Bots
+                </>
+              ) : (
+                <>
+                  <Zap className={`h-6 w-6 ${canStart ? 'fill-current' : ''}`} />
+                  {canStart 
+                    ? 'Start Game' 
+                    : players.length < 2 
+                      ? 'Waiting for players...' 
+                      : 'Player Not Ready'}
+                </>
+              )}
+            </Button>
+          ) : (
+             <Button
+              onClick={() => toggleReady()}
+              className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
+                  isReady 
+                  ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20' 
+                  : 'bg-muted text-muted-foreground border-2 border-border/50 hover:bg-muted/80'
+              }`}
+            >
+              {isReady ? "Ready!" : "Not Ready"}
+            </Button>
+          )}
         </motion.div>
       </div>
     </div>

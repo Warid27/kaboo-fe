@@ -6,9 +6,11 @@ import { cn } from '@/lib/utils';
 
 interface DiscardPileProps {
   cards: Card[];
+  onClick?: () => void;
+  isHighlighted?: boolean;
 }
 
-export function DiscardPile({ cards }: DiscardPileProps) {
+export function DiscardPile({ cards, onClick, isHighlighted }: DiscardPileProps) {
   const topCards = cards.slice(-8);
   const topCard = cards[cards.length - 1];
 
@@ -17,8 +19,13 @@ export function DiscardPile({ cards }: DiscardPileProps) {
       <motion.div
         data-card-anchor="discard-pile"
         initial={{ rotateX: 30, rotateZ: -12, rotateY: 4 }}
-        className="relative h-full w-full"
+        className={cn(
+            "relative h-full w-full",
+            onClick && "cursor-pointer hover:scale-105 transition-transform",
+            isHighlighted && "animate-pulse ring-2 ring-primary rounded-xl"
+        )}
         style={{ transformStyle: 'preserve-3d' }}
+        onClick={onClick}
       >
         {/* Fanned-out previous cards with 3D depth */}
       {topCards.slice(0, -1).map((card, i) => (

@@ -15,15 +15,11 @@ export function ScoringScreen() {
 
   const handlePlayAgain = () => {
     playAgain();
-    if (matchOver) {
-      router.push('/lobby');
-    }
-    // If not match over, we stay in game/scoring loop, handled by GamePage checking screen state
+    // In unified mode, the screen state handles navigation
   };
 
   const handleBackToLobby = () => {
     backToLobby();
-    router.push('/');
   };
 
   const sortedPlayers = useMemo(() => {

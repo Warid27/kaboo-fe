@@ -13,4 +13,5 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
 });

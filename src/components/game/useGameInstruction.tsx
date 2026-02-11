@@ -64,7 +64,11 @@ export function useGameInstruction(): GameInstruction | null {
   if (gamePhase === 'initial_look') {
     return {
       id: 'initial-look',
-      content: `Peek at your cards! (${useGameStore.getState().initialLooksRemaining} looks left)`,
+      content: (
+        <span className="flex items-center justify-center gap-1.5">
+          Memorize your first two cards! Press &quot;I&apos;m Ready&quot; when done <Eye className="h-4 w-4" />
+        </span>
+      ),
     };
   }
 
@@ -108,7 +112,7 @@ export function useGameInstruction(): GameInstruction | null {
         id: 'peek-opponent',
         content: (
           <span className="flex items-center justify-center gap-1.5">
-            Tap an opponent's card to peek <Search className="h-4 w-4" />
+            Tap an opponent&apos;s card to peek <Search className="h-4 w-4" />
           </span>
         ),
       };
@@ -129,7 +133,7 @@ export function useGameInstruction(): GameInstruction | null {
             id: 'semi-blind-swap-select',
             content: (
               <span className="flex items-center justify-center gap-1.5">
-                Select an opponent's card to reveal <ScanEye className="h-4 w-4" />
+                Select an opponent&apos;s card to reveal <ScanEye className="h-4 w-4" />
               </span>
             ),
           }

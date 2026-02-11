@@ -10,11 +10,23 @@ import { playKabooSound } from '@/lib/sounds';
 import { useReplayStore } from '../replayStore';
 import { useStatsStore } from '../statsStore';
 import { captureSnapshot } from '../snapshotHelper';
+import { gameApi } from '@/services/gameApi';
+import { toast } from '@/components/ui/use-toast';
 
 export function createTurnActions(set: StoreSet, get: StoreGet) {
   return {
-    callKaboo: () => {
-      const { currentPlayerIndex, players } = get();
+    callKaboo: async () => {
+      const { currentPlayerIndex, players, gameMode, gameId } = get();
+
+      if (gameMode === 'online') {
+          try {
+              await gameApi.playMove(gameId, { type: 'CALL_KABOO' });
+          } catch {
+              toast({ title: 'Action Failed', description: 'Failed to call Kaboo.', variant: 'destructive' });
+          }
+          return;
+      }
+
       addLog(get, set, currentPlayerIndex, '[KABOO] called KABOO!');
       playKabooSound();
       set({

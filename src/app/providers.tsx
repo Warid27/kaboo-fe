@@ -6,6 +6,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useOnlineGame } from "@/hooks/useOnlineGame";
+
+function GameManager() {
+  useOnlineGame();
+  return null;
+}
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useSettingsStore((s) => s.theme);
@@ -41,6 +47,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
+          <GameManager />
           {children}
           <Toaster />
           <Sonner />

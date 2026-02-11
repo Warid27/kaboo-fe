@@ -24,6 +24,7 @@ export const PlayerSchema = z.object({
   avatarColor: z.string(),
   cards: z.array(CardSchema),
   isHost: z.boolean().default(false),
+  isReady: z.boolean().default(false),
   score: z.number().default(0),
   totalScore: z.number().default(0),
 });
@@ -80,6 +81,7 @@ export type EffectType =
 // ── Game Action Schemas ──
 
 export const GameActionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('ready') }), // Signal finished peeking
   z.object({ type: z.literal('draw'), playerId: z.string() }),
   z.object({ type: z.literal('swap'), playerId: z.string(), playerCardId: z.string() }),
   z.object({ type: z.literal('discard'), playerId: z.string() }),
@@ -128,5 +130,24 @@ export interface TapState {
 }
 
 // ── Game State ──
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type GameState = any;
+export interface RemotePlayer {
+  id: string;
+  name: string;
+  cards?: Card[];
+  score?: number;
+  isReady?: boolean;
+}
+
+export interface GameState {
+  roomCode: string;
+  phase: string;
+  turnPhase: string;
+  currentTurnUserId: string;
+  playerOrder: string[];
+  players: Record<string, RemotePlayer>;
+  deck?: Card[];
+  discardPile?: Card[];
+  drawnCard?: Card | null;
+  kabooCallerId?: string | null;
+  turnsLeftAfterKaboo?: number | null;
+}

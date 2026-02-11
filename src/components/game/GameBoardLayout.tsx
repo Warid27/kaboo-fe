@@ -1,6 +1,5 @@
 'use client';
 
-import { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PlayerHand } from './PlayerHand';
 import { OpponentHand } from './OpponentHand';
@@ -62,6 +61,7 @@ export interface GameBoardLayoutProps {
   onPlayerCardClick: (cardId: string) => void;
   onOpponentCardClick: (cardId: string) => void;
   onDrawClick: () => void;
+  onDrawFromDiscard?: () => void;
   onCallKaboo?: () => void;
   onSwapCard?: (cardId: string) => void;
   onDiscardHeldCard?: () => void;
@@ -99,6 +99,7 @@ export function GameBoardLayout({
   onPlayerCardClick,
   onOpponentCardClick,
   onDrawClick,
+  onDrawFromDiscard,
   onCallKaboo,
   onSwapCard,
   onDiscardHeldCard,
@@ -218,7 +219,11 @@ export function GameBoardLayout({
               isHighlighted={isPlayerTurn && turnPhase === 'draw' && gamePhase === 'playing'}
               onClick={onDrawClick}
             />
-            <DiscardPile cards={discardPile} />
+            <DiscardPile 
+                cards={discardPile} 
+                onClick={onDrawFromDiscard}
+                isHighlighted={isPlayerTurn && turnPhase === 'draw' && gamePhase === 'playing'}
+            />
           </div>
 
           {/* Held card — positioned above center, with a clear background to avoid overlap confusion */}
@@ -260,7 +265,11 @@ export function GameBoardLayout({
 
             <PlayerHand
               cards={currentPlayer.cards}
-              peekedCards={[...peekedCards, ...effectPreviewCardIds]}
+              peekedCards={[
+                ...peekedCards,
+                ...effectPreviewCardIds,
+                ...(gamePhase === 'initial_look' ? currentPlayer.cards.slice(0, 2).map((c) => c.id) : []),
+              ]}
               memorizedCards={memorizedCards}
               selectedCards={effectiveSelectedCards}
               highlightAll={

@@ -44,7 +44,7 @@ export function ActionButtons(props: ActionButtonsProps) {
   const endTurn = props.onEndTurn ?? store.endTurn;
 
   const isPlayerTurn = currentPlayerIndex === 0;
-  if (!isPlayerTurn || tapState) return null;
+  if ((!isPlayerTurn && gamePhase !== 'initial_look') || tapState) return null;
 
   // Check for valid pair (Matt's Pairs Rule)
   const canDiscardPair = settings.mattsPairsRule && turnPhase === 'action' && heldCard && selectedCards.length === 2 && (() => {
@@ -56,6 +56,26 @@ export function ActionButtons(props: ActionButtonsProps) {
 
   return (
     <AnimatePresence mode="wait">
+      {/* Initial Look - Ready Button */}
+      {gamePhase === 'initial_look' && (
+        <motion.div
+          key="ready"
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
+          className="mb-2"
+        >
+          <Button
+            onClick={() => {
+              store.readyToPlay();
+            }}
+            className="h-12 w-full rounded-xl font-display text-lg font-bold gradient-success text-primary-foreground glow-success hover:brightness-110 transition-all sm:h-12 min-h-[3rem]"
+          >
+            <Check className="mr-2 h-5 w-5" /> I&apos;m Ready
+          </Button>
+        </motion.div>
+      )}
+
       {/* KABOO Button - available at start of turn during draw phase */}
       {gamePhase === 'playing' && turnPhase === 'draw' && !kabooCalled && (
         <motion.div

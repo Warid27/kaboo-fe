@@ -24,18 +24,19 @@ export function HomeScreen() {
   const handleCreate = async () => {
     if (!playerName.trim()) return;
     await createGame();
-    router.push('/lobby');
   };
 
   const handleJoin = async () => {
     if (!playerName.trim()) return;
-    await joinGame(joinCode);
-    router.push('/lobby');
+    try {
+      await joinGame(joinCode);
+    } catch {
+      // Toast is handled in the store action
+    }
   };
 
   const handleOffline = () => {
     startOffline();
-    router.push('/lobby');
   };
 
   return (

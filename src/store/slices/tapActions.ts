@@ -2,6 +2,8 @@ import type { Card } from '@/types/game';
 import type { StoreGet, StoreSet } from '../helpers';
 import { addLog } from '../helpers';
 import { playTapSuccessSound, playTapPenaltySound } from '@/lib/sounds';
+import { gameApi } from '@/services/gameApi';
+import { toast } from '@/components/ui/use-toast';
 
 export function createTapActions(set: StoreSet, get: StoreGet) {
   return {
@@ -38,9 +40,68 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
       });
     },
 
-    confirmTapDiscard: () => {
-      const { tapState, players, discardPile, drawPile } = get();
+    confirmTapDiscard: async () => {
+      const { tapState, players, discardPile, drawPile, gameMode, gameId } = get();
       if (!tapState || tapState.phase !== 'selecting' || tapState.selectedCardIds.length === 0) return;
+
+      if (gameMode === 'online') {
+          // Process snaps sequentially
+          for (const cardId of tapState.selectedCardIds) {
+              // Find the card index for this player
+              // In online mode, we assume 'players' state is synced.
+              // We need to find which player owns this card and the index.
+              let targetPlayerId: string | undefined;
+              let cardIndex = -1;
+              
+              players.forEach(p => {
+                  const idx = p.cards.findIndex(c => c.id === cardId);
+                  if (idx !== -1) {
+                      targetPlayerId = p.id;
+                      cardIndex = idx;
+                  }
+              });
+
+              if (targetPlayerId && cardIndex !== -1) {
+                  // Only allow snapping if it's the current user?
+                  // Backend 'snapCard' takes userId.
+                  // If I am snapping my own card: OK.
+                  // If I am snapping someone else's card?
+                  // Kaboo rules: You can snap ANY matching card if you are the fastest.
+                  // But 'snapCard' in backend implementation (line 265):
+                  // snapCard(state, userId, cardIndex) -> "const player = state.players[userId]"
+                  // It implies you can only snap YOUR OWN cards in the current backend logic?
+                  // Let's re-read backend rule: "const player = state.players[userId]; if (!player.cards[cardIndex]) throw..."
+                  // YES. The current backend implementation ONLY allows snapping your OWN cards.
+                  // Frontend logic allows selecting any card?
+                  // Frontend: "for (let pi = 0; pi < players.length; pi++) ... if (pi !== 0) swapTargets.push(pi)"
+                  // Frontend supports snapping others' cards (and then swapping).
+                  // Backend Limitation: The current backend `snapCard` function seems to assume `userId` is the owner of the card.
+                  
+                  // Wait, if I snap someone else's card, I need to provide THEIR userId?
+                  // But `processMove` calls `snapCard(state, userId, action.cardIndex)`.
+                  // And `snapCard` uses `state.players[userId]`.
+                  // So `userId` is the caller (me).
+                  // So I can only snap MY OWN cards with the current backend.
+                  // This is a discrepancy or a simplified rule in backend.
+                  // However, let's implement what we can: Snapping OWN cards.
+                  
+                  const { myPlayerId } = get();
+                  if (targetPlayerId === myPlayerId) {
+                      try {
+                          await gameApi.playMove(gameId, { type: 'SNAP', cardIndex });
+                      } catch {
+                          toast({ title: 'Action Failed', description: 'Failed to snap card.', variant: 'destructive' });
+                      }
+                  } else {
+                      toast({ title: 'Not Supported', description: 'Can only snap your own cards online currently.', variant: 'destructive' });
+                  }
+              }
+          }
+          // Reset tap state handled by subscription or manually
+          set({ tapState: null });
+          return;
+      }
+
       const topDiscard = discardPile[discardPile.length - 1];
       if (!topDiscard) return;
 
