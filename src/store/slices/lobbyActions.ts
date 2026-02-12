@@ -11,7 +11,9 @@ import { toast } from '@/components/ui/use-toast';
 
 export function createLobbyActions(set: StoreSet, get: StoreGet) {
   return {
-    updateSettings: (partial: Partial<GameStore['settings']>) =>
+    updateSettings: (partial: Partial<GameStore['settings']>) => {
+      const { gameMode, gameId } = get();
+      
       set((state) => {
         const newSettings = { ...state.settings, ...partial };
         if (partial.numPlayers !== undefined && state.gameMode === 'offline' && state.screen === 'lobby') {
@@ -23,7 +25,20 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
           return { settings: newSettings, players: updatedPlayers };
         }
         return { settings: newSettings };
-      }),
+      });
+
+      // If online, sync to backend
+      if (gameMode === 'online' && gameId) {
+        gameApi.updateSettings(gameId, partial).catch((error) => {
+          console.error('Failed to sync settings to backend:', error);
+          toast({
+            title: 'Failed to update settings',
+            description: error instanceof Error ? error.message : 'Please try again.',
+            variant: 'destructive',
+          });
+        });
+      }
+    },
 
     createGame: async () => {
       const { playerName } = get();
@@ -53,10 +68,23 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         console.log('[Kaboo Debug] createGame success:', { gameId, roomCode });
         
         // Subscribe to game updates
-        const subscription = gameApi.subscribeToGame(gameId, (state) => {
-          console.log('[Kaboo Debug] Subscription update triggering syncFromRemote');
-          get().syncFromRemote(state);
-        });
+        const subscription = gameApi.subscribeToGame(
+          gameId, 
+          (state) => {
+            console.log('[Kaboo Debug] Subscription update triggering syncFromRemote');
+            get().syncFromRemote(state);
+          },
+          (error) => {
+            if (error.message === 'You are not in this game') {
+              toast({
+                title: 'Kicked from game',
+                description: 'You have been removed from the game.',
+                variant: 'destructive',
+              });
+              get().backToLobby();
+            }
+          }
+        );
 
         set({
           screen: 'lobby',
@@ -67,9 +95,28 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
           subscription,
         });
         console.log('[Kaboo Debug] Lobby state set locally');
+
+        // Initial state fetch
+        get().checkGameState();
       } catch (error) {
         toast({
           title: 'Failed to create game',
+          description: error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive',
+        });
+      }
+    },
+
+    endGame: async () => {
+      const { gameId } = get();
+      if (!gameId) return;
+
+      try {
+        await gameApi.endGame(gameId);
+        get().backToLobby(); // Cleanup local state
+      } catch (error) {
+        toast({
+          title: 'Failed to end game',
           description: error instanceof Error ? error.message : 'Please try again.',
           variant: 'destructive',
         });
@@ -98,9 +145,22 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         const { gameId } = await gameApi.joinGame(roomCode, playerName);
         
         // Subscribe to game updates
-        const subscription = gameApi.subscribeToGame(gameId, (state) => {
-          get().syncFromRemote(state);
-        });
+        const subscription = gameApi.subscribeToGame(
+          gameId, 
+          (state) => {
+            get().syncFromRemote(state);
+          },
+          (error) => {
+            if (error.message === 'You are not in this game') {
+              toast({
+                title: 'Kicked from game',
+                description: 'You have been removed from the game.',
+                variant: 'destructive',
+              });
+              get().backToLobby();
+            }
+          }
+        );
 
         set({
           screen: 'lobby',
@@ -110,6 +170,9 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
           players: [], // Will be synced via subscription
           subscription,
         });
+
+        // Initial state fetch
+        get().checkGameState();
       } catch (error) {
         toast({
           title: 'Failed to join game',
@@ -178,6 +241,14 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
             get().syncFromRemote(game_state);
         } catch (e) {
             console.error("Polling error", e);
+            if (e instanceof Error && e.message === 'You are not in this game') {
+                toast({
+                    title: 'Kicked from game',
+                    description: 'You have been removed from the game.',
+                    variant: 'destructive',
+                });
+                get().backToLobby();
+            }
         }
     },
 
@@ -221,6 +292,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         ...p,
         cards: hands[i],
         score: 0,
+        isReady: false,
       }));
 
       const allDealtCardIds = hands.flat().map((c) => c.id);
@@ -276,12 +348,32 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     readyToPlay: async () => {
-      const { gameId, gameMode } = get();
+      const { gameId, gameMode, myPlayerId } = get();
       if (gameMode === 'online') {
+        if (!gameId) return;
+
+        // Optimistic update
+        set((state) => ({
+          players: state.players.map((p) =>
+            p.id === myPlayerId ? { ...p, isReady: true } : p
+          ),
+        }));
+
         try {
           await gameApi.playMove(gameId, { type: 'READY_TO_PLAY' });
         } catch (error) {
           console.error('Failed to set ready state', error);
+          // Revert optimistic update
+          set((state) => ({
+            players: state.players.map((p) =>
+              p.id === myPlayerId ? { ...p, isReady: false } : p
+            ),
+          }));
+          toast({
+            title: 'Action Failed',
+            description: 'Failed to set ready state. Please try again.',
+            variant: 'destructive',
+          });
         }
         return;
       }

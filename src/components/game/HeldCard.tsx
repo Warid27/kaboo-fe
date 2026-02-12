@@ -21,7 +21,7 @@ export function HeldCard({ card }: HeldCardProps) {
             Drawn Card
           </span>
           <div className="rounded-2xl bg-card/80 p-1 backdrop-blur-sm shadow-card border border-border/30">
-            <PlayingCard card={card} isFaceUp size="lg" />
+            <PlayingCard card={card} isFaceUp={card.faceUp} size="lg" />
           </div>
         </motion.div>
       )}

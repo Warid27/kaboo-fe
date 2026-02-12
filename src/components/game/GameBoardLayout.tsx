@@ -268,7 +268,6 @@ export function GameBoardLayout({
               peekedCards={[
                 ...peekedCards,
                 ...effectPreviewCardIds,
-                ...(gamePhase === 'initial_look' ? currentPlayer.cards.slice(0, 2).map((c) => c.id) : []),
               ]}
               memorizedCards={memorizedCards}
               selectedCards={effectiveSelectedCards}

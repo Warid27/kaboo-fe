@@ -10,7 +10,7 @@ import { PlayerList } from './PlayerList';
 import { Bot, Zap } from 'lucide-react';
 
 export function LobbyScreen() {
-  const { roomCode, players, startGame, backToLobby, gameMode, myPlayerId, toggleReady, checkGameState } = useGameStore();
+  const { roomCode, players, startGame, endGame, backToLobby, gameMode, myPlayerId, toggleReady, checkGameState } = useGameStore();
   
   const isOffline = gameMode === 'offline';
   const me = players.find(p => p.id === myPlayerId);
@@ -18,6 +18,18 @@ export function LobbyScreen() {
   const isHost = isOffline || (me?.isHost ?? false);
   
   const isReady = me?.isReady;
+
+  const handleEndGame = async () => {
+    if (confirm('Are you sure you want to end the game for everyone?')) {
+      await endGame();
+    }
+  };
+
+  const handleLeaveGame = async () => {
+    if (confirm('Are you sure you want to leave the game?')) {
+      backToLobby();
+    }
+  };
 
   // Check if all other players are ready (host is ready by definition of being able to click start)
   const otherPlayers = players.filter(p => !p.isHost);
@@ -154,43 +166,66 @@ export function LobbyScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, type: 'spring' }}
+          className="space-y-3"
         >
           {isHost ? (
-            <Button
-              onClick={handleStart}
-              disabled={!canStart}
-              className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
-                canStart
-                  ? 'gradient-gold text-primary-foreground glow-gold hover:brightness-110'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-70'
-              }`}
-            >
-              {isOffline ? (
-                <>
-                  <Bot className="h-6 w-6" /> Start vs Bots
-                </>
-              ) : (
-                <>
-                  <Zap className={`h-6 w-6 ${canStart ? 'fill-current' : ''}`} />
-                  {canStart 
-                    ? 'Start Game' 
-                    : players.length < 2 
-                      ? 'Waiting for players...' 
-                      : 'Player Not Ready'}
-                </>
+            <>
+              <Button
+                onClick={handleStart}
+                disabled={!canStart}
+                className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
+                  canStart
+                    ? 'gradient-gold text-primary-foreground glow-gold hover:brightness-110'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed opacity-70'
+                }`}
+              >
+                {isOffline ? (
+                  <>
+                    <Bot className="h-6 w-6" /> Start vs Bots
+                  </>
+                ) : (
+                  <>
+                    <Zap className={`h-6 w-6 ${canStart ? 'fill-current' : ''}`} />
+                    {canStart 
+                      ? 'Start Game' 
+                      : players.length < 2 
+                        ? 'Waiting for players...' 
+                        : 'Player Not Ready'}
+                  </>
+                )}
+              </Button>
+              
+              {!isOffline && (
+                <Button
+                  onClick={handleEndGame}
+                  variant="outline"
+                  className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  End Game for Everyone
+                </Button>
               )}
-            </Button>
+            </>
           ) : (
-             <Button
-              onClick={() => toggleReady()}
-              className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
-                  isReady 
-                  ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20' 
-                  : 'bg-muted text-muted-foreground border-2 border-border/50 hover:bg-muted/80'
-              }`}
-            >
-              {isReady ? "Ready!" : "Not Ready"}
-            </Button>
+            <>
+              <Button
+                onClick={() => toggleReady()}
+                className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
+                    isReady 
+                    ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20' 
+                    : 'bg-muted text-muted-foreground border-2 border-border/50 hover:bg-muted/80'
+                }`}
+              >
+                {isReady ? "Ready!" : "Not Ready"}
+              </Button>
+              
+              <Button
+                onClick={handleLeaveGame}
+                variant="outline"
+                className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                Leave Game
+              </Button>
+            </>
           )}
         </motion.div>
       </div>

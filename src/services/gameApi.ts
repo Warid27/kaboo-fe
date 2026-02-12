@@ -55,179 +55,146 @@ async function parseSupabaseError(error: any): Promise<string> {
   return 'Server error. Please try again.';
 }
 
+/**
+ * Shared helper to invoke Supabase functions with automatic session refresh and retry
+ */
+async function invokeFunction(
+  functionName: string, 
+  body: any, 
+  client: SupabaseClient = supabase
+) {
+  // Helper to refresh session
+  const ensureValidSession = async () => {
+    const { data: { session }, error: sessionError } = await client.auth.getSession();
+    
+    // If no session or error, try to refresh
+    if (sessionError || !session || !session.access_token) {
+      const { data: refreshData, error: refreshError } = await client.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        throw new Error('Session expired. Please refresh the page.');
+      }
+      return refreshData.session;
+    }
+    return session;
+  };
+
+  let session = await ensureValidSession();
+
+  const invoke = async (token: string) => {
+    return await client.functions.invoke(functionName, {
+      body,
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+  };
+
+  let { data, error } = await invoke(session.access_token);
+
+  // If 401, try one refresh and retry
+  const is401 = error && (
+    (error as any).status === 401 || 
+    (error as any).context?.status === 401
+  );
+
+  if (is401) {
+    try {
+      const { data: refreshData } = await client.auth.refreshSession();
+      if (refreshData.session) {
+        const retry = await invoke(refreshData.session.access_token);
+        data = retry.data;
+        error = retry.error;
+      }
+    } catch (refreshErr) {
+      console.error(`[GameAPI] Refresh failed during retry for ${functionName}:`, refreshErr);
+    }
+  }
+
+  if (error) {
+    const errorMessage = await parseSupabaseError(error);
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}
+
 export const gameApi = {
   /**
    * Creates a new game room
    */
   async createGame(playerName?: string, client: SupabaseClient = supabase) {
-    await client.auth.getSession();
-    
-    // Debug logging for Auth issues
-    console.log('[Kaboo Debug] Creating game...', { playerName });
-    
-    const { data, error } = await client.functions.invoke('create-game', {
-      body: { playerName },
-    });
-    
-    if (error) {
-      console.error('[Kaboo Debug] create-game error:', error);
-      const errorMessage = await parseSupabaseError(error);
-      throw new Error(errorMessage);
-    }
-    console.log('[Kaboo Debug] Game created:', data);
-    return data as { gameId: string; roomCode: string };
+    return await invokeFunction('create-game', { playerName }, client) as { gameId: string; roomCode: string };
   },
 
   /**
    * Joins an existing game using a room code
    */
   async joinGame(roomCode: string, playerName?: string, client: SupabaseClient = supabase) {
-    const { data, error } = await client.functions.invoke('join-game', {
-      body: { roomCode, playerName },
-    });
-    
-    if (error) {
-      const errorMessage = await parseSupabaseError(error);
-      throw new Error(errorMessage);
-    }
-    return data as { gameId: string };
+    return await invokeFunction('join-game', { roomCode, playerName }, client) as { gameId: string };
   },
 
   /**
    * Leaves the current game
    */
   async leaveGame(gameId: string, client: SupabaseClient = supabase) {
-    const { data, error } = await client.functions.invoke('leave-game', {
-      body: { gameId },
-    });
-    if (error) {
-      const errorMessage = await parseSupabaseError(error);
-      throw new Error(errorMessage);
-    }
-    return data;
+    return await invokeFunction('leave-game', { gameId }, client);
+  },
+
+  /**
+   * Ends the current game (Host only)
+   */
+  async endGame(gameId: string, client: SupabaseClient = supabase) {
+    return await invokeFunction('end-game', { gameId }, client);
   },
 
   async toggleReady(gameId: string, isReady: boolean, client: SupabaseClient = supabase) {
-    // Check session logic - force refresh if expired
-    let { data: { session }, error: sessionError } = await client.auth.getSession();
-    
-    // Helper to refresh session
-    const ensureValidSession = async () => {
-        const { data: refreshData, error: refreshError } = await client.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-             throw new Error('Session expired. Please refresh the page.');
-        }
-        return refreshData.session;
-    };
+    return await invokeFunction('toggle-ready', { gameId, isReady }, client);
+  },
 
-    if (sessionError || !session || !session.access_token) {
-        console.log('[GameAPI] No valid session, attempting refresh...');
-        session = await ensureValidSession();
-    }
-
-    // Try invoke
-    const invoke = async (token: string) => {
-        console.log('[GameAPI] Invoking toggle-ready with token length:', token.length);
-        return await client.functions.invoke('toggle-ready', {
-            body: { gameId, isReady },
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
-    };
-
-    let { data, error } = await invoke(session.access_token);
-
-    // If 401, try one refresh and retry
-    const is401 = error && (
-        (error as any).status === 401 || 
-        (error as any).context?.status === 401
-    );
-
-    if (is401) {
-         console.warn('[GameAPI] 401 received, attempting token refresh and retry...');
-         try {
-             session = await ensureValidSession();
-             const retry = await invoke(session.access_token);
-             data = retry.data;
-             error = retry.error;
-         } catch (refreshErr) {
-             console.error('[GameAPI] Refresh failed during retry:', refreshErr);
-         }
-    }
-
-    if (error) {
-      console.error('[GameAPI] toggleReady error:', error);
-      const errorMessage = await parseSupabaseError(error);
-      throw new Error(errorMessage);
-    }
-    return data;
+  /**
+   * Updates game settings (Host only)
+   */
+  async updateSettings(gameId: string, settings: Partial<GameState['settings']>, client: SupabaseClient = supabase) {
+    return await invokeFunction('update-settings', { gameId, settings }, client) as { success: boolean; settings: GameState['settings'] };
   },
 
   /**
    * Starts the game (Host only)
    */
   async startGame(gameId: string, client: SupabaseClient = supabase) {
-    const { data, error } = await client.functions.invoke('start-game', {
-      body: { gameId },
-    });
-    if (error) throw error;
-    return data as { success: boolean; state: GameState };
+    return await invokeFunction('start-game', { gameId }, client) as { success: boolean; state: GameState };
   },
 
   /**
    * Kicks a player from the game (Host only)
    */
   async kickPlayer(gameId: string, playerId: string, client: SupabaseClient = supabase) {
-    const { data, error } = await client.functions.invoke('kick-player', {
-      body: { gameId, playerId },
-    });
-    if (error) {
-      const errorMessage = await parseSupabaseError(error);
-      throw new Error(errorMessage);
-    }
-    return data as { success: boolean; kickedPlayerId: string };
+    return await invokeFunction('kick-player', { gameId, playerId }, client) as { success: boolean; kickedPlayerId: string };
   },
 
   /**
    * Retrieves the current game state, sanitized for the requesting user
    */
   async getGameState(gameId: string, client: SupabaseClient = supabase) {
-    const { data, error } = await client.functions.invoke('get-game-state', {
-      body: { gameId },
-    });
-    if (error) throw error;
-    return data as { game_state: GameState };
+    return await invokeFunction('get-game-state', { gameId }, client) as { game_state: GameState };
   },
 
   /**
    * Executes a game action
    */
   async playMove(gameId: string, action: GameActionPayload, client: SupabaseClient = supabase) {
-    const { data, error } = await client.functions.invoke('play-move', {
-      body: { gameId, action },
-    });
-    
-    if (error) {
-      // console.error('[GameAPI] play-move error:', error);
-      if (error instanceof Error && 'context' in error) {
-         const res = (error as { context: Response }).context;
-         try {
-           await res.clone().text(); 
-           // console.error('[GameAPI] play-move Error Body:', text);
-         } catch {
-            // console.error('[GameAPI] Could not read error body:', e);
-         }
-      }
-      throw error;
-    }
-    return data as { success: boolean; game_state: GameState; result: unknown };
+    return await invokeFunction('play-move', { gameId, action }, client) as { success: boolean; game_state: GameState; result: unknown };
   },
 
   /**
    * Subscribes to game updates
    */
-  subscribeToGame(gameId: string, onUpdate: (state: GameState) => void, client: SupabaseClient = supabase) {
+  subscribeToGame(
+    gameId: string, 
+    onUpdate: (state: GameState) => void, 
+    onError?: (error: Error) => void,
+    client: SupabaseClient = supabase
+  ) {
     console.log('[Kaboo Debug] Subscribing to game:', gameId);
     const channel = client.channel(`game:${gameId}`)
       .on(
@@ -247,6 +214,9 @@ export const gameApi = {
             onUpdate(game_state);
           } catch (error) {
             console.error('[Kaboo Debug] Failed to sync state:', error);
+            if (onError && error instanceof Error) {
+              onError(error);
+            }
           }
         }
       )

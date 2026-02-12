@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 // ── Card Schemas ──
 
-export const SuitSchema = z.enum(['hearts', 'diamonds', 'clubs', 'spades']);
+export const SuitSchema = z.enum(['hearts', 'diamonds', 'clubs', 'spades', 'joker']);
 export type Suit = z.infer<typeof SuitSchema>;
 
-export const RankSchema = z.enum(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']);
+export const RankSchema = z.enum(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'joker']);
 export type Rank = z.infer<typeof RankSchema>;
 
 export const CardSchema = z.object({
@@ -143,6 +143,7 @@ export interface GameState {
   phase: string;
   turnPhase: string;
   currentTurnUserId: string;
+  settings?: GameSettings;
   playerOrder: string[];
   players: Record<string, RemotePlayer>;
   deck?: Card[];

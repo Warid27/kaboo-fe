@@ -95,6 +95,7 @@ export interface GameStore {
 
   // Actions
   createGame: () => Promise<void>;
+  endGame: () => Promise<void>;
   joinGame: (roomCode: string) => Promise<void>;
   toggleReady: () => Promise<void>;
   kickPlayer: (playerId: string) => Promise<void>;
@@ -287,6 +288,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       gameMode: 'online',
       roomCode: remoteState.roomCode || get().roomCode,
       players,
+      settings: remoteState.settings || get().settings,
       currentPlayerIndex: currentPlayerIndex === -1 ? 0 : currentPlayerIndex,
       gamePhase,
       turnPhase,

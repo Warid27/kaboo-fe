@@ -39,15 +39,8 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
           });
 
           if (current.initialLooksRemaining <= 0) {
-            setTimeout(() => {
-              if (gameMode === 'online') {
-                  // In online, we don't force local phase changes. 
-                  // We should tell the backend we are ready.
-                  get().readyToPlay();
-              } else {
-                  set({ gamePhase: 'playing', turnPhase: 'draw' });
-              }
-            }, 500);
+            // No longer auto-transitioning or calling readyToPlay().
+            // Player must manually click "I'm Ready" button.
           }
         }, 2000);
       } else if (gamePhase === 'playing' || gamePhase === 'kaboo_final') {

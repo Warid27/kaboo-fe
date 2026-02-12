@@ -54,25 +54,34 @@ export function ActionButtons(props: ActionButtonsProps) {
     return card1 && card2 && card1.rank === card2.rank;
   })();
 
+  // Check if current player is ready
+  const isReady = players[0]?.isReady;
+
   return (
     <AnimatePresence mode="wait">
       {/* Initial Look - Ready Button */}
       {gamePhase === 'initial_look' && (
         <motion.div
-          key="ready"
+          key="ready-container"
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5 }}
           className="mb-2"
         >
-          <Button
-            onClick={() => {
-              store.readyToPlay();
-            }}
-            className="h-12 w-full rounded-xl font-display text-lg font-bold gradient-success text-primary-foreground glow-success hover:brightness-110 transition-all sm:h-12 min-h-[3rem]"
-          >
-            <Check className="mr-2 h-5 w-5" /> I&apos;m Ready
-          </Button>
+          {isReady ? (
+            <div className="h-12 w-full flex items-center justify-center rounded-xl font-display text-lg font-bold bg-muted text-muted-foreground border-2 border-dashed border-muted-foreground/30 animate-pulse">
+              <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Waiting for others...
+            </div>
+          ) : (
+            <Button
+              onClick={() => {
+                store.readyToPlay();
+              }}
+              className="h-12 w-full rounded-xl font-display text-lg font-bold gradient-success text-primary-foreground glow-success hover:brightness-110 transition-all sm:h-12 min-h-[3rem]"
+            >
+              <Check className="mr-2 h-5 w-5" /> I&apos;m Ready
+            </Button>
+          )}
         </motion.div>
       )}
 

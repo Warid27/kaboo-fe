@@ -82,7 +82,12 @@ describe('Game Flow', () => {
       state = useGameStore.getState();
       expect(state.memorizedCards).toContain(card2Id);
 
-      vi.advanceTimersByTime(1000);
+      // Now manual ready click is required for all players
+      state.readyToPlay(); // Local player ready
+      // For offline mode, other players are bots but we still need to set their ready status
+      // or ensure the game advances correctly. 
+      // In the current implementation, readyToPlay handles the transition if all are ready.
+      
       state = useGameStore.getState();
       expect(state.gamePhase).toBe('playing');
       expect(state.turnPhase).toBe('draw');
@@ -99,8 +104,8 @@ describe('Game Flow', () => {
       state = useGameStore.getState();
       state.peekCard(cards[1].id);
       vi.advanceTimersByTime(2500);
-      vi.advanceTimersByTime(1000);
 
+      state.readyToPlay();
       state = useGameStore.getState();
       expect(state.gamePhase).toBe('playing');
       expect(state.initialLooksRemaining).toBe(0);
@@ -123,7 +128,8 @@ describe('Game Flow', () => {
       state = useGameStore.getState();
       state.peekCard(cards[1].id);
       vi.advanceTimersByTime(2500);
-      vi.advanceTimersByTime(1000);
+      
+      state.readyToPlay();
       return useGameStore.getState();
     }
 

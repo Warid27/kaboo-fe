@@ -46,10 +46,26 @@ export function GameBoard() {
     discardHeldCard,
     discardPair,
     endTurn,
+    checkGameState,
   } = useGameStore();
 
   const instruction = useGameInstruction();
   useKeyboardShortcuts();
+
+  // Polling for game state updates (especially for being kicked)
+  useEffect(() => {
+    const { gameMode } = useGameStore.getState();
+    if (gameMode === 'offline') return;
+    
+    // Initial check
+    checkGameState();
+
+    const interval = setInterval(() => {
+        checkGameState();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [checkGameState]);
 
   // Turn timer countdown (pauses during effects)
   const timerRef = useRef<ReturnType<typeof setInterval>>();

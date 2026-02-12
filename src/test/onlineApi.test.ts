@@ -19,6 +19,10 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     return;
   }
 
+  // Set timeout for all tests in this block to 30s
+  // because Edge Functions can be slow/cold-start
+  const TEST_TIMEOUT = 30000;
+
   let hostClient: SupabaseClient;
   let guestClient: SupabaseClient;
   let hostId: string;
@@ -59,19 +63,19 @@ describe('Real API — Full Game Flow (2 Players)', () => {
 
   it('1. Create lobby (Host)', async () => {
     // Use hostClient to create game
-    const res = await gameApi.createGame(hostClient);
+    const res = await gameApi.createGame(undefined, hostClient);
     gameId = res.gameId;
     roomCode = res.roomCode;
     
     expect(gameId).toMatch(/[a-z0-9-]{10,}/i);
     expect(roomCode).toMatch(/^[A-Z0-9]{4}$/);
-  });
+  }, TEST_TIMEOUT);
 
   it('2. Join lobby (Guest)', async () => {
     // Use guestClient to join
-    const res = await gameApi.joinGame(roomCode, guestClient);
+    const res = await gameApi.joinGame(roomCode, undefined, guestClient);
     expect(res.gameId).toBe(gameId);
-  });
+  }, TEST_TIMEOUT);
 
   it('3. Start Game (Host)', async () => {
     // Use hostClient to start
@@ -79,7 +83,8 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     
     expect(res.success).toBe(true);
     expect(res.state).toBeTruthy();
-    expect(res.state.phase).toBe('playing');
+    // Initially game is in initial_look phase
+    expect(res.state.phase).toBe('initial_look');
     expect(Object.keys(res.state.players).length).toBe(2);
 
     // Verify DB status (Wait briefly for propagation if needed, though usually immediate)
@@ -87,7 +92,16 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     if (error) throw error;
     
     expect(game.status).toBe('playing');
-  });
+  }, TEST_TIMEOUT);
+
+  it('3.5. Ready to Play', async () => {
+    // Both players must signal ready to transition to 'playing' phase
+    await gameApi.playMove(gameId, { type: 'READY_TO_PLAY' }, hostClient);
+    const res = await gameApi.playMove(gameId, { type: 'READY_TO_PLAY' }, guestClient);
+    
+    expect(res.success).toBe(true);
+    expect(res.game_state.phase).toBe('playing');
+  }, TEST_TIMEOUT);
 
   it('4. Play Game (Turns)', async () => {
     // Fetch state to see whose turn it is
@@ -117,7 +131,7 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     // Verify turn changed
     const nextPlayerId = swapRes.game_state.currentTurnUserId || swapRes.game_state.current_turn;
     expect(nextPlayerId).not.toBe(currentPlayerId);
-  });
+  }, TEST_TIMEOUT);
 
   it('5. Subscribe Work (Realtime)', async () => {
     // 1. Identify current player (who just received the turn)
@@ -172,5 +186,25 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     } else {
       expect(updateReceived).toBe(true);
     }
-  }, 15000); // Increased timeout for Realtime
+  }, TEST_TIMEOUT);
+
+  it('6. Leave Game (Guest)', async () => {
+    const res = await gameApi.leaveGame(gameId, guestClient);
+    expect(res.success).toBe(true);
+    
+    await new Promise(r => setTimeout(r, 1000));
+    
+    const { data: players } = await hostClient.from('game_players').select('user_id').eq('game_id', gameId);
+    expect(players?.length).toBe(1);
+    expect(players?.[0].user_id).toBe(hostId);
+  }, TEST_TIMEOUT);
+
+  it('7. End Game (Host)', async () => {
+    const res = await gameApi.endGame(gameId, hostClient);
+    expect(res.success).toBe(true);
+    
+    // Verify game is deleted
+    const { data: game } = await hostClient.from('games').select('id').eq('id', gameId).maybeSingle();
+    expect(game).toBeNull();
+  }, TEST_TIMEOUT);
 });

@@ -1,4 +1,4 @@
-import { Heart, Diamond, Club, Spade } from 'lucide-react';
+import { Heart, Diamond, Club, Spade, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Suit } from '@/types/game';
 
@@ -21,5 +21,7 @@ export function SuitIcon({ suit, className, fill = true }: SuitIconProps) {
       return <Club className={cn(commonClasses, fillClass)} />;
     case 'spades':
       return <Spade className={cn(commonClasses, fillClass)} />;
+    case 'joker':
+      return <Star className={cn(commonClasses, fillClass)} />;
   }
 }
