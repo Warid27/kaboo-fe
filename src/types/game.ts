@@ -127,6 +127,7 @@ export interface TapState {
   selectedCardIds: string[];
   swapTargets: number[];
   swapsRemaining: number;
+  discarderIndex?: number;
 }
 
 // ── Game State ──
@@ -149,6 +150,10 @@ export interface GameState {
   deck?: Card[];
   discardPile?: Card[];
   drawnCard?: Card | null;
+  pendingEffect?: {
+    type: 'PEEK_OWN' | 'PEEK_OTHER' | 'SWAP_EITHER' | 'LOOK_AND_SWAP' | 'FULL_VISION_SWAP';
+    sourceCardRank?: Rank;
+  } | null;
   kabooCallerId?: string | null;
   turnsLeftAfterKaboo?: number | null;
 }

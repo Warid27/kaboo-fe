@@ -30,7 +30,6 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       // If online, sync to backend
       if (gameMode === 'online' && gameId) {
         gameApi.updateSettings(gameId, partial).catch((error) => {
-          console.error('Failed to sync settings to backend:', error);
           toast({
             title: 'Failed to update settings',
             description: error instanceof Error ? error.message : 'Please try again.',
@@ -65,13 +64,11 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         }
 
         const { gameId, roomCode } = await gameApi.createGame(playerName);
-        console.log('[Kaboo Debug] createGame success:', { gameId, roomCode });
         
         // Subscribe to game updates
         const subscription = gameApi.subscribeToGame(
           gameId, 
           (state) => {
-            console.log('[Kaboo Debug] Subscription update triggering syncFromRemote');
             get().syncFromRemote(state);
           },
           (error) => {
@@ -81,7 +78,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
                 description: 'You have been removed from the game.',
                 variant: 'destructive',
               });
-              get().backToLobby();
+              get().exitToHome();
             }
           }
         );
@@ -94,7 +91,6 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
           players: [], // Will be synced via subscription
           subscription,
         });
-        console.log('[Kaboo Debug] Lobby state set locally');
 
         // Initial state fetch
         get().checkGameState();
@@ -113,7 +109,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
 
       try {
         await gameApi.endGame(gameId);
-        get().backToLobby(); // Cleanup local state
+        get().exitToHome(); // Cleanup local state
       } catch (error) {
         toast({
           title: 'Failed to end game',
@@ -157,7 +153,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
                 description: 'You have been removed from the game.',
                 variant: 'destructive',
               });
-              get().backToLobby();
+              get().exitToHome();
             }
           }
         );
@@ -240,14 +236,13 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
             const { game_state } = await gameApi.getGameState(gameId);
             get().syncFromRemote(game_state);
         } catch (e) {
-            console.error("Polling error", e);
             if (e instanceof Error && e.message === 'You are not in this game') {
                 toast({
                     title: 'Kicked from game',
                     description: 'You have been removed from the game.',
                     variant: 'destructive',
                 });
-                get().backToLobby();
+                get().exitToHome();
             }
         }
     },
@@ -334,7 +329,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
               peekIds.forEach((cardId) => {
                 const card = player.cards.find((c) => c.id === cardId);
                 if (card) {
-                  mem = botRememberCard(mem, cardId, card);
+                  mem = botRememberCard(mem, cardId, card, 0);
                 }
               });
               updatedMemories[player.id] = mem;
@@ -361,8 +356,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
 
         try {
           await gameApi.playMove(gameId, { type: 'READY_TO_PLAY' });
-        } catch (error) {
-          console.error('Failed to set ready state', error);
+        } catch {
           // Revert optimistic update
           set((state) => ({
             players: state.players.map((p) =>
@@ -407,17 +401,17 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       }
     },
 
-    backToLobby: () => {
+    exitToHome: () => {
       const { gameId, gameMode, subscription } = get();
 
       if (subscription) {
         subscription.unsubscribe();
       }
-
+      
       if (gameMode === 'online' && gameId) {
-        gameApi.leaveGame(gameId).catch((e) => console.error('Failed to leave game', e));
+        gameApi.leaveGame(gameId).catch(() => {});
       }
-
+      
       set({
         screen: 'home',
         players: [],

@@ -107,9 +107,8 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     // Fetch state to see whose turn it is
     const { game_state: state } = await gameApi.getGameState(gameId, hostClient);
     
-    let currentPlayerId = state.currentTurnUserId || state.current_turn; 
-    if (!currentPlayerId && state.current_turn) currentPlayerId = state.current_turn;
-
+    const currentPlayerId = state.currentTurnUserId; 
+    
     const activeClient = currentPlayerId === hostId ? hostClient : guestClient;
     
     // Step A: Draw from Deck
@@ -118,7 +117,7 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     }, activeClient);
     
     expect(drawRes.success).toBe(true);
-    expect(drawRes.game_state.turnPhase || drawRes.game_state.turn_phase).toBe('action');
+    expect(drawRes.game_state.turnPhase).toBe('action');
     
     // Step B: Swap with Own Card (Index 0)
     const swapRes = await gameApi.playMove(gameId, {
@@ -129,14 +128,24 @@ describe('Real API — Full Game Flow (2 Players)', () => {
     expect(swapRes.success).toBe(true);
     
     // Verify turn changed
-    const nextPlayerId = swapRes.game_state.currentTurnUserId || swapRes.game_state.current_turn;
+    const nextPlayerId = swapRes.game_state.currentTurnUserId;
     expect(nextPlayerId).not.toBe(currentPlayerId);
+  }, TEST_TIMEOUT);
+
+  it('4.5. Card Effects (Type Check)', async () => {
+    const { game_state: state } = await gameApi.getGameState(gameId, hostClient);
+    
+    // Ensure state structure for pendingEffect is correct
+    expect(state).toHaveProperty('pendingEffect');
+    if (state.pendingEffect) {
+      expect(['PEEK_OWN', 'PEEK_OTHER', 'SWAP_EITHER', 'LOOK_AND_SWAP', 'FULL_VISION_SWAP']).toContain(state.pendingEffect.type);
+    }
   }, TEST_TIMEOUT);
 
   it('5. Subscribe Work (Realtime)', async () => {
     // 1. Identify current player (who just received the turn)
     const { game_state: state } = await gameApi.getGameState(gameId, hostClient);
-    const activeUserId = state.currentTurnUserId || state.current_turn;
+    const activeUserId = state.currentTurnUserId;
     
     const activeClient = activeUserId === hostId ? hostClient : guestClient;
     const waitingClient = activeUserId === hostId ? guestClient : hostClient;

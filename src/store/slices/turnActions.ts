@@ -15,8 +15,9 @@ import { toast } from '@/components/ui/use-toast';
 
 export function createTurnActions(set: StoreSet, get: StoreGet) {
   return {
-    callKaboo: async () => {
+    callKaboo: async (overrideCallerIndex?: number | null) => {
       const { currentPlayerIndex, players, gameMode, gameId } = get();
+      const callerIndex = (overrideCallerIndex !== undefined && overrideCallerIndex !== null) ? overrideCallerIndex : currentPlayerIndex;
 
       if (gameMode === 'online') {
           try {
@@ -27,11 +28,11 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
           return;
       }
 
-      addLog(get, set, currentPlayerIndex, '[KABOO] called KABOO!');
+      addLog(get, set, callerIndex, '[KABOO] called KABOO!');
       playKabooSound();
       set({
         kabooCalled: true,
-        kabooCallerIndex: currentPlayerIndex,
+        kabooCallerIndex: callerIndex,
         showKabooAnnouncement: true,
         gamePhase: 'kaboo_final',
         finalRoundTurnsLeft: players.length - 1,
@@ -47,6 +48,14 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
 
     endTurn: () => {
       const { players, currentPlayerIndex, kabooCalled, finalRoundTurnsLeft, settings, turnNumber } = get();
+
+      // Check if any player has 0 cards and trigger auto-Kaboo if not already called
+      const playerWithNoCardsIndex = players.findIndex(p => p.cards.length === 0);
+      if (playerWithNoCardsIndex !== -1 && !kabooCalled) {
+        get().callKaboo(playerWithNoCardsIndex);
+        return;
+      }
+
       const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
 
       if (kabooCalled && finalRoundTurnsLeft <= 0) {
@@ -56,7 +65,8 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
       }
 
       if (get().drawPile.length === 0) {
-        set({ gamePhase: 'reveal' });
+        addLog(get, set, -1, 'Deck exhausted! Auto-Kaboo triggered.');
+        set({ gamePhase: 'reveal', kabooCalled: true, kabooCallerIndex: -1 });
         setTimeout(() => { get().revealAllCards(); }, 500);
         return;
       }
@@ -140,7 +150,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
 
         const currentBot = currentState.players[currentPlayerIndex];
         const currentMemory = currentState.botMemories[bot.id] ?? memory;
-        const decision = botDecideAction(currentBot, drawnCard, currentMemory, difficulty);
+        const decision = botDecideAction(currentBot, drawnCard, currentMemory, turnNumber, difficulty);
 
         if (decision.action === 'swap' && decision.swapCardId) {
           const cardIndex = currentBot.cards.findIndex((c) => c.id === decision.swapCardId);
@@ -159,7 +169,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
             const updatedMem = { ...currentState.botMemories };
             let mem = updatedMem[bot.id] ?? createBotMemory();
             mem = botForgetCard(mem, decision.swapCardId!);
-            mem = botRememberCard(mem, newCard.id, drawnCard);
+            mem = botRememberCard(mem, newCard.id, drawnCard, turnNumber);
             updatedMem[bot.id] = mem;
 
             set({
@@ -170,13 +180,13 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
             });
             addLog(get, set, currentPlayerIndex, `swapped → discarded ${oldCard.rank}${getSuitToken(oldCard.suit)}`);
 
-            setTimeout(() => { get().openTapWindow(); }, 800);
+            setTimeout(() => { get().openTapWindow(currentPlayerIndex); }, 800);
           } else {
             set({
               discardPile: [...currentState.discardPile, { ...drawnCard, faceUp: true }],
               heldCard: null,
             });
-            setTimeout(() => { get().openTapWindow(); }, 800);
+            setTimeout(() => { get().openTapWindow(currentPlayerIndex); }, 800);
           }
         } else {
           // Bot discards
@@ -198,13 +208,13 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
               const effBot = effState.players[currentPlayerIndex];
               const opponents = effState.players.filter((_, i) => i !== currentPlayerIndex);
               const effMemory = effState.botMemories[bot.id] ?? createBotMemory();
-              const resolution = botResolveEffect(effBot, opponents, effect, effMemory, difficulty);
+              const resolution = botResolveEffect(effBot, opponents, effect, effMemory, turnNumber, difficulty);
 
               if (effect === 'peek_own' && resolution.targetCardIds[0]) {
                 const targetCard = effBot.cards.find((c) => c.id === resolution.targetCardIds[0]);
                 if (targetCard) {
                   const updatedMem = { ...effState.botMemories };
-                  updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard);
+                  updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard, turnNumber);
                   set({ botMemories: updatedMem });
                   addLog(get, set, currentPlayerIndex, '[EYE] peeked at own card');
                 }
@@ -213,7 +223,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
                 const targetCard = allCards.find((c) => c.id === resolution.targetCardIds[0]);
                 if (targetCard) {
                   const updatedMem = { ...effState.botMemories };
-                  updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard);
+                  updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard, turnNumber);
                   set({ botMemories: updatedMem });
                   addLog(get, set, currentPlayerIndex, "[SEARCH] peeked at an opponent's card");
                 }
@@ -248,14 +258,37 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
                       i === (c2 as { pi: number; ci: number }).ci ? { ...temp, faceUp: false } : card
                     ),
                   };
-                  set({ players: updatedPlayers });
+                  
+                  // Memory Corruption: All bots forget swapped cards if it was blind
+                  // Even if not blind, spectators should forget them.
+                  const updatedMemories = { ...effState.botMemories };
+                  Object.keys(updatedMemories).forEach((bid) => {
+                     let m = updatedMemories[bid];
+                     m = botForgetCard(m, resolution.targetCardIds[0]);
+                     m = botForgetCard(m, resolution.targetCardIds[1]);
+                     updatedMemories[bid] = m;
+                   });
+ 
+                   // If it was a vision swap, the current bot remembers the cards it saw/swapped
+                   if (effect === 'semi_blind_swap' || effect === 'full_vision_swap') {
+                     const allCards = updatedPlayers.flatMap(p => p.cards);
+                     const card1 = allCards.find(c => c.id === resolution.targetCardIds[0]);
+                     const card2 = allCards.find(c => c.id === resolution.targetCardIds[1]);
+                     if (card1) updatedMemories[bot.id] = botRememberCard(updatedMemories[bot.id], card1.id, card1, turnNumber);
+                     if (card2) updatedMemories[bot.id] = botRememberCard(updatedMemories[bot.id], card2.id, card2, turnNumber);
+                   }
+
+                   set({ 
+                     players: updatedPlayers,
+                     botMemories: updatedMemories
+                   });
                 }
               }
 
               setTimeout(() => get().endTurn(), 600);
             }, 1000);
           } else {
-            setTimeout(() => { get().openTapWindow(); }, 800);
+            setTimeout(() => { get().openTapWindow(currentPlayerIndex); }, 800);
           }
         }
       }, 1200);
@@ -271,14 +304,18 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
         score: calculateScore(p.cards),
       }));
 
-      if (kabooCallerIndex !== null) {
+      if (kabooCallerIndex !== null && updatedPlayers[kabooCallerIndex]) {
         const callerScore = updatedPlayers[kabooCallerIndex].score;
         const otherScores = updatedPlayers.filter((_, i) => i !== kabooCallerIndex).map((p) => p.score);
         const minOtherScore = Math.min(...otherScores);
-        if (callerScore >= minOtherScore) {
+
+        if (callerScore < minOtherScore) {
+          // Success: Caller has the strictly lowest score. No penalty.
+        } else {
+          // Penalty: Caller tied or has higher score
           updatedPlayers[kabooCallerIndex] = {
             ...updatedPlayers[kabooCallerIndex],
-            score: updatedPlayers[kabooCallerIndex].score + 20,
+            score: callerScore + 20,
           };
         }
       }
@@ -313,6 +350,12 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
       setTimeout(() => {
         set({ screen: 'scoring' });
       }, 3000);
+    },
+
+    nextRound: () => {
+      const { roundNumber } = get();
+      set({ roundNumber: roundNumber + 1 });
+      get().startGame();
     },
   };
 }

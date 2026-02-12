@@ -3,8 +3,8 @@ import { getKabooCardValue, getEffectType } from '@/lib/cardUtils';
 
 /** Tracks what each bot knows about cards on the table */
 export interface BotMemory {
-  /** Card IDs this bot has seen and remembers, mapped to their known value */
-  knownCards: Record<string, number>;
+  /** Card IDs this bot has seen and remembers, mapped to their known value and turn learned */
+  knownCards: Record<string, { value: number; turnLearned: number }>;
 }
 
 export function createBotMemory(): BotMemory {
@@ -16,12 +16,15 @@ export function createBotMemory(): BotMemory {
 interface DifficultyConfig {
   initialPeekCount: number;
   memoryReliability: number;
+  memoryDecayTurns: number | null; // null means never forgets
   lowCardSwapMax: number;
   effectUseChance: number;
   kabooMinTurn: number;
   kabooKnownAllThreshold: number;
   kabooPartialThreshold: number;
   tapChance: number;
+  tapMinDelay: number;
+  tapMaxDelay: number;
   unknownCardEstimate: number;
 }
 
@@ -29,34 +32,43 @@ const DIFFICULTY_CONFIGS: Record<BotDifficulty, DifficultyConfig> = {
   easy: {
     initialPeekCount: 1,
     memoryReliability: 0.6,
+    memoryDecayTurns: 10,
     lowCardSwapMax: 2,
     effectUseChance: 0.4,
     kabooMinTurn: 6,
     kabooKnownAllThreshold: 6,
     kabooPartialThreshold: 3,
     tapChance: 0.5,
+    tapMinDelay: 2000,
+    tapMaxDelay: 3000,
     unknownCardEstimate: 5,
   },
   medium: {
     initialPeekCount: 2,
     memoryReliability: 1.0,
+    memoryDecayTurns: 20,
     lowCardSwapMax: 3,
     effectUseChance: 0.7,
     kabooMinTurn: 3,
     kabooKnownAllThreshold: 8,
     kabooPartialThreshold: 5,
     tapChance: 0.8,
+    tapMinDelay: 1000,
+    tapMaxDelay: 2000,
     unknownCardEstimate: 6,
   },
   hard: {
     initialPeekCount: 2,
     memoryReliability: 1.0,
+    memoryDecayTurns: null,
     lowCardSwapMax: 4,
     effectUseChance: 0.9,
     kabooMinTurn: 2,
     kabooKnownAllThreshold: 10,
     kabooPartialThreshold: 7,
     tapChance: 0.95,
+    tapMinDelay: 200,
+    tapMaxDelay: 800,
     unknownCardEstimate: 7,
   },
 };
@@ -65,19 +77,32 @@ function getConfig(difficulty: BotDifficulty): DifficultyConfig {
   return DIFFICULTY_CONFIGS[difficulty];
 }
 
-/** Apply memory reliability — easy bots may "forget" known cards */
-function applyMemoryFilter(memory: BotMemory, config: DifficultyConfig): BotMemory {
-  if (config.memoryReliability >= 1.0) return memory;
-  const filtered: Record<string, number> = {};
-  for (const [id, val] of Object.entries(memory.knownCards)) {
+/** Apply difficulty-based memory filtering and decay */
+export function applyMemoryFilter(memory: BotMemory, config: DifficultyConfig, currentTurn: number): BotMemory {
+  const filtered: Record<string, { value: number; turnLearned: number }> = {};
+  
+  for (const [id, info] of Object.entries(memory.knownCards)) {
+    // 1. Turn-based decay
+    if (config.memoryDecayTurns !== null) {
+      if (currentTurn - info.turnLearned > config.memoryDecayTurns) {
+        continue; // Forgot due to time
+      }
+    }
+    
+    // 2. Probabilistic filter (reliability)
     if (Math.random() < config.memoryReliability) {
-      filtered[id] = val;
+      filtered[id] = info;
     }
   }
   return { knownCards: filtered };
 }
 
 // ── Bot Functions ──
+
+export function getBotTapDelay(difficulty: BotDifficulty): number {
+  const config = getConfig(difficulty);
+  return config.tapMinDelay + Math.random() * (config.tapMaxDelay - config.tapMinDelay);
+}
 
 /** Bot peeks at cards during initial look */
 export function botInitialPeek(bot: Player, difficulty: BotDifficulty = 'medium'): string[] {
@@ -86,12 +111,15 @@ export function botInitialPeek(bot: Player, difficulty: BotDifficulty = 'medium'
 }
 
 /** Record that the bot saw a card's value */
-export function botRememberCard(memory: BotMemory, cardId: string, card: Card): BotMemory {
+export function botRememberCard(memory: BotMemory, cardId: string, card: Card, currentTurn: number): BotMemory {
   return {
     ...memory,
     knownCards: {
       ...memory.knownCards,
-      [cardId]: getKabooCardValue(card),
+      [cardId]: { 
+        value: getKabooCardValue(card), 
+        turnLearned: currentTurn 
+      },
     },
   };
 }
@@ -114,10 +142,11 @@ export function botDecideAction(
   bot: Player,
   drawnCard: Card,
   memory: BotMemory,
+  currentTurn: number,
   difficulty: BotDifficulty = 'medium',
 ): BotDecision {
   const config = getConfig(difficulty);
-  const effectiveMemory = applyMemoryFilter(memory, config);
+  const effectiveMemory = applyMemoryFilter(memory, config, currentTurn);
   const drawnValue = getKabooCardValue(drawnCard);
   const effect = getEffectType(drawnCard.rank);
 
@@ -127,8 +156,8 @@ export function botDecideAction(
 
   for (const card of bot.cards) {
     const known = effectiveMemory.knownCards[card.id];
-    if (known !== undefined && known > worstKnownValue) {
-      worstKnownValue = known;
+    if (known !== undefined && known.value > worstKnownValue) {
+      worstKnownValue = known.value;
       worstKnownId = card.id;
     }
   }
@@ -174,13 +203,13 @@ export function botDecideAction(
 export function botShouldCallKaboo(
   bot: Player,
   memory: BotMemory,
-  turnNumber: number,
+  currentTurn: number,
   difficulty: BotDifficulty = 'medium',
 ): boolean {
   const config = getConfig(difficulty);
-  if (turnNumber < config.kabooMinTurn) return false;
+  if (currentTurn < config.kabooMinTurn) return false;
 
-  const effectiveMemory = applyMemoryFilter(memory, config);
+  const effectiveMemory = applyMemoryFilter(memory, config, currentTurn);
 
   let estimatedTotal = 0;
   let unknownCount = 0;
@@ -188,7 +217,7 @@ export function botShouldCallKaboo(
   for (const card of bot.cards) {
     const known = effectiveMemory.knownCards[card.id];
     if (known !== undefined) {
-      estimatedTotal += known;
+      estimatedTotal += known.value;
     } else {
       unknownCount++;
       estimatedTotal += config.unknownCardEstimate;
@@ -216,10 +245,11 @@ export function botResolveEffect(
   opponents: Player[],
   effectType: EffectType,
   memory: BotMemory,
+  currentTurn: number,
   difficulty: BotDifficulty = 'medium',
 ): { targetCardIds: string[] } {
   const config = getConfig(difficulty);
-  const effectiveMemory = applyMemoryFilter(memory, config);
+  const effectiveMemory = applyMemoryFilter(memory, config, currentTurn);
 
   switch (effectType) {
     case 'peek_own': {
@@ -241,8 +271,8 @@ export function botResolveEffect(
 
     case 'blind_swap': {
       const worstOwn = bot.cards.reduce((worst, card) => {
-        const val = effectiveMemory.knownCards[card.id] ?? config.unknownCardEstimate;
-        const worstVal = effectiveMemory.knownCards[worst.id] ?? config.unknownCardEstimate;
+        const val = effectiveMemory.knownCards[card.id]?.value ?? config.unknownCardEstimate;
+        const worstVal = effectiveMemory.knownCards[worst.id]?.value ?? config.unknownCardEstimate;
         return val > worstVal ? card : worst;
       }, bot.cards[0]);
 
@@ -258,8 +288,8 @@ export function botResolveEffect(
     case 'semi_blind_swap':
     case 'full_vision_swap': {
       const worstOwn2 = bot.cards.reduce((worst, card) => {
-        const val = effectiveMemory.knownCards[card.id] ?? config.unknownCardEstimate;
-        const worstVal = effectiveMemory.knownCards[worst.id] ?? config.unknownCardEstimate;
+        const val = effectiveMemory.knownCards[card.id]?.value ?? config.unknownCardEstimate;
+        const worstVal = effectiveMemory.knownCards[worst.id]?.value ?? config.unknownCardEstimate;
         return val > worstVal ? card : worst;
       }, bot.cards[0]);
 
@@ -282,11 +312,14 @@ export function botShouldTap(
   bot: Player,
   discardTopRank: string,
   memory: BotMemory,
+  currentTurn: number,
   difficulty: BotDifficulty = 'medium',
 ): string | null {
   const config = getConfig(difficulty);
+  const effectiveMemory = applyMemoryFilter(memory, config, currentTurn);
+  
   for (const card of bot.cards) {
-    const known = memory.knownCards[card.id];
+    const known = effectiveMemory.knownCards[card.id];
     if (known !== undefined && card.rank === discardTopRank) {
       if (Math.random() < config.tapChance) {
         return card.id;

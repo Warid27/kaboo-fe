@@ -68,6 +68,7 @@ export interface GameStore {
   showEffectOverlay: boolean;
   dealtCardIds: string[];
   isPaused: boolean;
+  isActionLocked: boolean;
 
   // Bot state
   botMemories: Record<string, BotMemory>;
@@ -84,6 +85,8 @@ export interface GameStore {
   flyingCards: FlyingCardEntry[];
   addFlyingCard: (card: Card, fromAnchor: string, toAnchor: string) => void;
   removeFlyingCard: (id: string) => void;
+  resetGame: () => void;
+  backToLobby: () => void;
 
   // Subscription
   subscription: RealtimeChannel | null;
@@ -112,22 +115,25 @@ export interface GameStore {
   resolveEffect: (targetCardId: string) => Promise<void>;
   confirmEffect: () => Promise<void>;
   declineEffect: () => void;
-  openTapWindow: () => void;
+  openTapWindow: (discarderIndex: number) => void;
   activateTap: () => void;
   tapSelectCard: (cardId: string) => void;
   confirmTapDiscard: () => Promise<void>;
   tapSwapCard: (ownCardId: string) => void;
   skipTapSwap: () => void;
   finalizeTap: () => void;
-  callKaboo: () => Promise<void>;
+  callKaboo: (overrideCallerIndex?: number | null) => Promise<void>;
   endTurn: () => void;
   playAgain: () => void;
-  backToLobby: () => void;
+  exitToHome: () => void;
   selectCard: (cardId: string) => void;
   clearSelection: () => void;
   revealAllCards: () => void;
   simulateBotTurn: () => void;
+  nextRound: () => void;
   setIsPaused: (paused: boolean) => void;
+  lockAction: () => void;
+  unlockAction: () => void;
 }
 
 export const INITIAL_STATE = {
@@ -153,6 +159,7 @@ export const INITIAL_STATE = {
   showEffectOverlay: false,
   dealtCardIds: [] as string[],
   isPaused: false,
+  isActionLocked: false,
   botMemories: {} as Record<string, BotMemory>,
   kabooCalled: false,
   kabooCallerIndex: null as number | null,
@@ -182,9 +189,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   navigateTo: (screen) => set({ screen }),
   setPlayerName: (playerName) => set({ playerName }),
   setIsPaused: (isPaused) => set({ isPaused }),
+  lockAction: () => set({ isActionLocked: true }),
+  unlockAction: () => set({ isActionLocked: false }),
   syncFromRemote: (remoteState: GameState) => {
-    console.log('[Kaboo Debug] syncFromRemote called with:', remoteState);
-    
     // 1. Get current player ID (User ID)
     const { myPlayerId, gameMode, subscription } = get();
     
@@ -193,7 +200,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // 3. Check if I am still in the game
     if (gameMode === 'online' && myPlayerId && !rawOrder.includes(myPlayerId)) {
-        console.warn('[Kaboo] You are no longer in this game. Navigating to home.');
         if (subscription) subscription.unsubscribe();
         set({
             ...INITIAL_STATE,
@@ -217,17 +223,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ];
     }
     
-    console.log('[Kaboo Debug] My ID:', myPlayerId);
-    console.log('[Kaboo Debug] Raw Order:', rawOrder);
-    console.log('[Kaboo Debug] Rotated Order:', rotatedOrder);
-
     // 4. Map Players based on Rotated Order
     const players: Player[] = rotatedOrder.map((pid: string, index: number) => {
       const p = remoteState.players[pid] as RemotePlayer;
       
       // Safety check for missing player data
       if (!p) {
-          console.error(`[Kaboo Error] Player ${pid} in order but not in players map`);
           return {
               id: pid,
               name: 'Unknown',
@@ -269,6 +270,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let turnPhase: TurnPhase = 'draw';
     if (remoteState.turnPhase === 'action') turnPhase = 'action';
     if (remoteState.turnPhase === 'effect') turnPhase = 'effect';
+
+    // Map Effect Type
+    let effectType: EffectType = null;
+    let showEffectOverlay = false;
+    let effectStep: 'select' | 'preview' | null = null;
+
+    if (turnPhase === 'effect' && remoteState.pendingEffect) {
+        const remoteType = remoteState.pendingEffect.type;
+        if (remoteType === 'PEEK_OWN') effectType = 'peek_own';
+        else if (remoteType === 'PEEK_OTHER') effectType = 'peek_opponent';
+        else if (remoteType === 'SWAP_EITHER') {
+            effectType = 'blind_swap';
+            effectStep = 'select';
+        }
+        else if (remoteType === 'LOOK_AND_SWAP') {
+            effectType = 'semi_blind_swap';
+            effectStep = 'select';
+        }
+        else if (remoteType === 'FULL_VISION_SWAP') {
+            effectType = 'full_vision_swap';
+            effectStep = 'select';
+        }
+        showEffectOverlay = true;
+    }
     
     // Calculate indices based on Rotated Order
     const currentPlayerIndex = rotatedOrder.indexOf(remoteState.currentTurnUserId);
@@ -292,6 +317,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentPlayerIndex: currentPlayerIndex === -1 ? 0 : currentPlayerIndex,
       gamePhase,
       turnPhase,
+      effectType,
+      effectStep,
+      showEffectOverlay,
       
       drawPile: remoteState.deck || [],
       discardPile: remoteState.discardPile || [],
@@ -306,6 +334,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
   setMyPlayerId: (id) => set({ myPlayerId: id }),
+
+  resetGame: () => {
+    set({ ...INITIAL_STATE });
+  },
+
+  backToLobby: () => {
+    set({
+      screen: 'lobby',
+      ...INITIAL_STATE,
+    });
+  },
 
   addFlyingCard: (card, fromAnchor, toAnchor) => {
     const id = `fly-${++flyIdCounter}`;

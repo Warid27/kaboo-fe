@@ -40,6 +40,7 @@ export function createMockPlayers(count: number, hostName: string): Player[] {
       avatarColor: AVATAR_COLORS[0],
       cards: [],
       isHost: true,
+      isReady: true,
       score: 0,
       totalScore: 0,
     },
@@ -48,10 +49,11 @@ export function createMockPlayers(count: number, hostName: string): Player[] {
   for (let i = 1; i < count; i++) {
     players.push({
       id: `player-${i}`,
-      name: MOCK_PLAYER_NAMES[i] ?? `Player ${i + 1}`,
+      name: MOCK_PLAYER_NAMES[i - 1] || `Player ${i + 1}`,
       avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
       cards: [],
       isHost: false,
+      isReady: true,
       score: 0,
       totalScore: 0,
     });

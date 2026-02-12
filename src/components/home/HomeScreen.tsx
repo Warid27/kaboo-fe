@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { useStatsStore } from '@/store/statsStore';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,6 @@ import { Bot, Gamepad2, Users, BarChart3 } from 'lucide-react';
 export function HomeScreen() {
   const { setPlayerName, playerName, createGame, joinGame, startOffline } = useGameStore();
   const { totalRoundsPlayed, gamesWon, bestScore } = useStatsStore();
-  const router = useRouter();
   const [showJoinInput, setShowJoinInput] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [showStats, setShowStats] = useState(false);

@@ -7,14 +7,14 @@ import type { Card, Player, TurnPhase, EffectType } from '@/types/game';
 import { MOCK_CARDS } from '@/lib/mockData';
 
 const MOCK_PLAYERS: Player[] = [
-  { id: 'p1', name: 'Player 1 (Me)', avatarColor: 'hsl(174 80% 42%)', cards: MOCK_CARDS.slice(0, 4), isHost: true, score: 0, totalScore: 0 },
-  { id: 'p2', name: 'Bot Rex', avatarColor: 'hsl(270 60% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, score: 0, totalScore: 0 },
-  { id: 'p3', name: 'Bot Ziggy', avatarColor: 'hsl(25 90% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, score: 0, totalScore: 0 },
-  { id: 'p4', name: 'Bot Momo', avatarColor: 'hsl(330 80% 58%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, score: 0, totalScore: 0 },
-  { id: 'p5', name: 'Bot Pip', avatarColor: 'hsl(45 90% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, score: 0, totalScore: 0 },
-  { id: 'p6', name: 'Bot Nova', avatarColor: 'hsl(200 80% 50%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, score: 0, totalScore: 0 },
-  { id: 'p7', name: 'Bot Blix', avatarColor: 'hsl(140 60% 45%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, score: 0, totalScore: 0 },
-  { id: 'p8', name: 'Bot Coco', avatarColor: 'hsl(0 75% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, score: 0, totalScore: 0 },
+  { id: 'p1', name: 'Player 1 (Me)', avatarColor: 'hsl(174 80% 42%)', cards: MOCK_CARDS.slice(0, 4), isHost: true, isReady: true, score: 0, totalScore: 0 },
+  { id: 'p2', name: 'Bot Rex', avatarColor: 'hsl(270 60% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, isReady: true, score: 0, totalScore: 0 },
+  { id: 'p3', name: 'Bot Ziggy', avatarColor: 'hsl(25 90% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, isReady: true, score: 0, totalScore: 0 },
+  { id: 'p4', name: 'Bot Momo', avatarColor: 'hsl(330 80% 58%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, isReady: true, score: 0, totalScore: 0 },
+  { id: 'p5', name: 'Bot Pip', avatarColor: 'hsl(45 90% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, isReady: true, score: 0, totalScore: 0 },
+  { id: 'p6', name: 'Bot Nova', avatarColor: 'hsl(200 80% 50%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, isReady: true, score: 0, totalScore: 0 },
+  { id: 'p7', name: 'Bot Blix', avatarColor: 'hsl(140 60% 45%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, isReady: true, score: 0, totalScore: 0 },
+  { id: 'p8', name: 'Bot Coco', avatarColor: 'hsl(0 75% 55%)', cards: MOCK_CARDS.slice(0, 4), isHost: false, isReady: true, score: 0, totalScore: 0 },
 ];
 
 const MOCK_SETTINGS = {

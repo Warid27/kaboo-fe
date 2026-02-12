@@ -47,6 +47,8 @@ export function GameBoard() {
     discardPair,
     endTurn,
     checkGameState,
+    backToLobby,
+    endGame,
   } = useGameStore();
 
   const instruction = useGameInstruction();
@@ -141,6 +143,18 @@ export function GameBoard() {
     }
   };
 
+  const handleLeaveGame = () => {
+    if (confirm('Are you sure you want to leave?')) {
+      backToLobby();
+    }
+  };
+
+  const handleEndGame = () => {
+    if (confirm('Are you sure you want to end the game for everyone?')) {
+      endGame();
+    }
+  };
+
   return (
     <GameBoardLayout
       players={players}
@@ -178,6 +192,8 @@ export function GameBoard() {
       onDiscardHeldCard={discardHeldCard}
       onDiscardPair={discardPair}
       onEndTurn={endTurn}
+      onLeaveGame={handleLeaveGame}
+      onEndGame={handleEndGame}
     />
   );
 }

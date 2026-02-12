@@ -17,10 +17,12 @@ The goal is to have the lowest total score when the round ends. Players start wi
 | **Black Jack** (Spades/Clubs) | 11 | |
 | **Ace** | 1 | |
 | **2 - 10** | Face Value | 2 = 2pts, etc. |
-| **Jokers** | -1 | *Assume -1 or 0 unless specified otherwise* |
+| **Jokers** | -1 | Lowest possible score is -2 (2 Jokers) |
 
 ## Game Flow
 On your turn, you draw a card from the deck or discard pile.
+If the **Deck** is exhausted, the game ends immediately (Auto-Kaboo). No reshuffling occurs.
+
 Then you must choose one action:
 
 1.  **Swap:** Replace one of your face-down cards with the drawn card. The replaced card is discarded.
@@ -38,7 +40,7 @@ After any player discards a card, a brief window opens.
 If enabled, during your action phase, if you have a pair of cards with the **same rank** in your hand, you may discard both.
 
 ## Card Effects
-Triggered when a specific card is **discarded** (not swapped).
+Triggered whenever a specific card is moved to the **discard pile** (whether by discarding the drawn card or by swapping it with a card from your hand).
 
 | Rank | Effect Name | Description |
 |------|-------------|-------------|

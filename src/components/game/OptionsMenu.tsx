@@ -9,16 +9,28 @@ import { useReplayStore } from '@/store/replayStore';
 import { SettingsModal } from './SettingsModal';
 import { Button } from '@/components/ui/button';
 
-export function OptionsMenu() {
+export interface OptionsMenuProps {
+  onLeave?: () => void;
+  onEndGame?: () => void;
+}
+
+export function OptionsMenu({ onLeave, onEndGame }: OptionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const isPaused = useGameStore((s) => s.isPaused);
   const setIsPaused = useGameStore((s) => s.setIsPaused);
-  const navigateTo = useGameStore((s) => s.navigateTo);
   const gameMode = useGameStore((s) => s.gameMode);
+  const backToLobby = useGameStore((s) => s.backToLobby);
+  const endGame = useGameStore((s) => s.endGame);
+  const players = useGameStore((s) => s.players);
+  const myPlayerId = useGameStore((s) => s.myPlayerId);
   const router = useRouter();
+
+  const isOffline = gameMode === 'offline';
+  const me = players.find(p => p.id === myPlayerId);
+  const isHost = isOffline || (me?.isHost ?? false);
 
   const canUndo = useReplayStore((s) => s.canUndo);
 
@@ -65,8 +77,26 @@ export function OptionsMenu() {
     setOpen(false);
     setShowExitConfirm(false);
     setIsPaused(false);
-    navigateTo('home');
+    if (onLeave) {
+      onLeave();
+    } else {
+      backToLobby();
+    }
     router.push('/');
+  };
+
+  const handleEndGame = () => {
+    if (onEndGame) {
+      onEndGame();
+      setOpen(false);
+      setIsPaused(false);
+      router.push('/');
+    } else if (confirm('Are you sure you want to end the game for everyone?')) {
+      setOpen(false);
+      setIsPaused(false);
+      endGame();
+      router.push('/');
+    }
   };
 
   const closeAll = () => {
@@ -139,12 +169,23 @@ export function OptionsMenu() {
                   )}
 
                   <div className="mx-2 my-1 h-px bg-border/30" />
+                  
+                  {isHost && !isOffline && (
+                    <button
+                      onClick={handleEndGame}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      End Game
+                    </button>
+                  )}
+
                   <button
                     onClick={handleExit}
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
                   >
                     <LogOut className="h-4 w-4" />
-                    Exit Game
+                    {isOffline ? 'Exit Game' : 'Leave Game'}
                   </button>
                 </div>
               ) : (

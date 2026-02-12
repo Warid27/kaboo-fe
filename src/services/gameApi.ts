@@ -47,9 +47,9 @@ async function parseSupabaseError(error: any): Promise<string> {
         // If text but not JSON, and short enough, it might be the error message
         if (text && text.length < 200) return text;
       }
-    } catch (e) {
-      console.error('Error parsing response body:', e);
-    }
+    } catch {
+        // Ignore parsing errors
+      }
   }
   
   return 'Server error. Please try again.';
@@ -60,7 +60,7 @@ async function parseSupabaseError(error: any): Promise<string> {
  */
 async function invokeFunction(
   functionName: string, 
-  body: any, 
+  body: Record<string, unknown>, 
   client: SupabaseClient = supabase
 ) {
   // Helper to refresh session
@@ -78,7 +78,7 @@ async function invokeFunction(
     return session;
   };
 
-  let session = await ensureValidSession();
+  const session = await ensureValidSession();
 
   const invoke = async (token: string) => {
     return await client.functions.invoke(functionName, {
@@ -93,8 +93,8 @@ async function invokeFunction(
 
   // If 401, try one refresh and retry
   const is401 = error && (
-    (error as any).status === 401 || 
-    (error as any).context?.status === 401
+    ('status' in error && error.status === 401) || 
+    ('context' in error && (error as { context: { status?: number } }).context?.status === 401)
   );
 
   if (is401) {
@@ -105,9 +105,9 @@ async function invokeFunction(
         data = retry.data;
         error = retry.error;
       }
-    } catch (refreshErr) {
-      console.error(`[GameAPI] Refresh failed during retry for ${functionName}:`, refreshErr);
-    }
+    } catch {
+        // Silent fail
+      }
   }
 
   if (error) {
@@ -195,7 +195,6 @@ export const gameApi = {
     onError?: (error: Error) => void,
     client: SupabaseClient = supabase
   ) {
-    console.log('[Kaboo Debug] Subscribing to game:', gameId);
     const channel = client.channel(`game:${gameId}`)
       .on(
         'postgres_changes',
@@ -205,24 +204,19 @@ export const gameApi = {
           table: 'games',
           filter: `id=eq.${gameId}`,
         },
-        async (payload) => {
-          console.log('[Kaboo Debug] Update received:', payload);
+        async () => {
           // When game updates, fetch the latest state
           try {
             const { game_state } = await this.getGameState(gameId, client);
-            console.log('[Kaboo Debug] Fetched fresh state:', game_state);
             onUpdate(game_state);
           } catch (error) {
-            console.error('[Kaboo Debug] Failed to sync state:', error);
             if (onError && error instanceof Error) {
               onError(error);
             }
           }
         }
       )
-      .subscribe((status) => {
-        console.log('[Kaboo Debug] Subscription status:', status);
-      });
+      .subscribe();
       
     return channel;
   }

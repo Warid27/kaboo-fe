@@ -67,6 +67,8 @@ export interface GameBoardLayoutProps {
   onDiscardHeldCard?: () => void;
   onDiscardPair?: (cardId1: string, cardId2: string) => void;
   onEndTurn?: () => void;
+  onLeaveGame?: () => void;
+  onEndGame?: () => void;
 }
 
 export function GameBoardLayout({
@@ -105,6 +107,8 @@ export function GameBoardLayout({
   onDiscardHeldCard,
   onDiscardPair,
   onEndTurn,
+  onLeaveGame,
+  onEndGame,
 }: GameBoardLayoutProps) {
   const anim = useAnimationConfig();
   const { cardScale, pileOffsetX, pileOffsetY, handGap, playerOffsetX, playerOffsetY } = useDevStore();
@@ -149,7 +153,10 @@ export function GameBoardLayout({
               isActive={isPlayerTurn}
             />
           )}
-          <OptionsMenu />
+          <OptionsMenu 
+            onLeave={onLeaveGame} 
+            onEndGame={onEndGame} 
+          />
         </div>
       </div>
 

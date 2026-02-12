@@ -95,7 +95,7 @@ export function ActionButtons(props: ActionButtonsProps) {
           className="mb-2"
         >
           <Button
-            onClick={callKaboo}
+            onClick={() => callKaboo()}
             className="h-12 w-full rounded-xl font-display text-lg font-bold gradient-gold text-primary-foreground glow-gold hover:brightness-110 transition-all sm:h-12 min-h-[3rem]"
           >
             <Flame className="mr-2 h-5 w-5 fill-current" /> Call KABOO! <KeyHint action="kaboo" />

@@ -11,7 +11,7 @@ import { toast } from '@/components/ui/use-toast';
 export function createCardActions(set: StoreSet, get: StoreGet) {
   return {
     peekCard: (cardId: string) => {
-      const { initialLooksRemaining, gamePhase, peekedCards, memorizedCards, gameMode } = get();
+      const { initialLooksRemaining, gamePhase, peekedCards, memorizedCards } = get();
 
       // Online Peek Logic (TODO: Integrate PEEK_OWN / PEEK_OPPONENT via API if strictly enforced by backend)
       // For now, if we assume PEEK is an effect result handled by backend state, we might just receive the card value.
@@ -58,14 +58,17 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
     },
 
     drawCard: async () => {
-      const { drawPile, turnPhase, currentPlayerIndex, gameMode, gameId } = get();
-      if (turnPhase !== 'draw' || drawPile.length === 0) return;
+      const { drawPile, turnPhase, currentPlayerIndex, gameMode, gameId, isActionLocked } = get();
+      if (isActionLocked || turnPhase !== 'draw' || drawPile.length === 0) return;
+      get().lockAction();
 
       if (gameMode === 'online') {
         try {
             await gameApi.playMove(gameId, { type: 'DRAW_FROM_DECK' });
         } catch {
             toast({ title: 'Action Failed', description: 'Failed to draw card.', variant: 'destructive' });
+        } finally {
+            get().unlockAction();
         }
         return;
       }
@@ -80,17 +83,21 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       addLog(get, set, currentPlayerIndex, `drew a card`);
       playDrawSound();
       useReplayStore.getState().pushSnapshot('draw', captureSnapshot(get()));
+      get().unlockAction();
     },
 
     drawFromDiscard: async () => {
-      const { discardPile, turnPhase, currentPlayerIndex, gameMode, gameId } = get();
-      if (turnPhase !== 'draw' || discardPile.length === 0) return;
+      const { discardPile, turnPhase, currentPlayerIndex, gameMode, gameId, isActionLocked } = get();
+      if (isActionLocked || turnPhase !== 'draw' || discardPile.length === 0) return;
+      get().lockAction();
 
       if (gameMode === 'online') {
         try {
             await gameApi.playMove(gameId, { type: 'DRAW_FROM_DISCARD' });
         } catch {
             toast({ title: 'Action Failed', description: 'Failed to draw from discard.', variant: 'destructive' });
+        } finally {
+            get().unlockAction();
         }
         return;
       }
@@ -105,21 +112,28 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       addLog(get, set, currentPlayerIndex, `drew from discard`);
       playDrawSound();
       useReplayStore.getState().pushSnapshot('drawFromDiscard', captureSnapshot(get()));
+      get().unlockAction();
     },
 
     swapCard: async (playerCardId: string) => {
-      const { heldCard, players, currentPlayerIndex, discardPile, botMemories, gameMode, gameId } = get();
-      if (!heldCard) return;
+      const { heldCard, players, currentPlayerIndex, discardPile, botMemories, gameMode, gameId, turnNumber, isActionLocked } = get();
+      if (isActionLocked || !heldCard) return;
+      get().lockAction();
 
       const player = players[currentPlayerIndex];
       const cardIndex = player.cards.findIndex((c) => c.id === playerCardId);
-      if (cardIndex === -1) return;
+      if (cardIndex === -1) {
+        get().unlockAction();
+        return;
+      }
 
       if (gameMode === 'online') {
           try {
               await gameApi.playMove(gameId, { type: 'SWAP_WITH_OWN', cardIndex });
           } catch {
               toast({ title: 'Action Failed', description: 'Failed to swap card.', variant: 'destructive' });
+          } finally {
+              get().unlockAction();
           }
           return;
       }
@@ -140,7 +154,7 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
         const botId = player.id;
         let mem = updatedMemories[botId] ?? createBotMemory();
         mem = botForgetCard(mem, playerCardId);
-        mem = botRememberCard(mem, newCard.id, heldCard);
+        mem = botRememberCard(mem, newCard.id, heldCard, turnNumber);
         updatedMemories[botId] = mem;
       }
 
@@ -169,20 +183,24 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
           heldCard: null,
           botMemories: updatedMemories,
         });
-        get().openTapWindow();
+        get().openTapWindow(currentPlayerIndex);
       }
       useReplayStore.getState().pushSnapshot('swap', captureSnapshot(get()));
+      get().unlockAction();
     },
 
     discardHeldCard: async () => {
-      const { heldCard, discardPile, currentPlayerIndex, gameMode, gameId } = get();
-      if (!heldCard) return;
+      const { heldCard, discardPile, currentPlayerIndex, gameMode, gameId, isActionLocked } = get();
+      if (isActionLocked || !heldCard) return;
+      get().lockAction();
 
       if (gameMode === 'online') {
           try {
               await gameApi.playMove(gameId, { type: 'DISCARD_DRAWN' });
           } catch {
               toast({ title: 'Action Failed', description: 'Failed to discard card.', variant: 'destructive' });
+          } finally {
+              get().unlockAction();
           }
           return;
       }
@@ -219,9 +237,10 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
           discardPile: [...discardPile, discarded],
           heldCard: null,
         });
-        get().openTapWindow();
+        get().openTapWindow(currentPlayerIndex);
       }
       useReplayStore.getState().pushSnapshot('discard', captureSnapshot(get()));
+      get().unlockAction();
     },
 
     discardPair: (cardId1: string, cardId2: string) => {

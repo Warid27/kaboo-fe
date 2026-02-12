@@ -1,6 +1,7 @@
 import type { StoreGet, StoreSet } from '../helpers';
 import { gameApi } from '@/services/gameApi';
 import { toast } from '@/components/ui/use-toast';
+import { botForgetCard } from '@/lib/botAI';
 
 export function createEffectActions(set: StoreSet, get: StoreGet) {
   return {
@@ -80,17 +81,19 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
       }
 
       if (effectType === 'semi_blind_swap') {
+        const { effectPreviewCardIds } = get();
         if (effectStep === 'select') {
-          const isOwnCard = players[0].cards.some((c) => c.id === targetCardId);
-          if (isOwnCard) return;
+          // Can peek at ANY card on the table (own or opponent)
           set({
             effectPreviewCardIds: [targetCardId],
             effectStep: 'preview',
             selectedCards: [],
           });
         } else if (effectStep === 'preview') {
-          const isOwnCard = players[0].cards.some((c) => c.id === targetCardId);
-          if (!isOwnCard) return;
+          // Can swap the peeked card with ANY other card on the table (own or another opponent)
+          const peekedId = effectPreviewCardIds[0];
+          if (targetCardId === peekedId) return; // Can't swap with itself
+          
           const current = get().selectedCards;
           if (current.includes(targetCardId)) {
             set({ selectedCards: [] });
@@ -109,18 +112,8 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
           } else if (current.length < 2) {
             const updated = [...current, targetCardId];
 
-            // Validate: must have one own card and one opponent card
             if (updated.length >= 2) {
-              const ownCardIds = new Set(players[0].cards.map((c) => c.id));
-              const hasOwn = updated.some((id) => ownCardIds.has(id));
-              const hasOpponent = updated.some((id) => !ownCardIds.has(id));
-
-              if (!hasOwn || !hasOpponent) {
-                // Invalid selection — don't advance
-                set({ selectedCards: updated });
-                return;
-              }
-
+              // Full vision swap allows any two cards on the table
               set({
                 selectedCards: updated,
                 effectPreviewCardIds: [...updated],
@@ -225,8 +218,22 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
       }
 
       let updatedMemorized = memorizedCards;
-      if (effectType === 'blind_swap' && card1Id && card2Id) {
-        updatedMemorized = memorizedCards.filter((id) => id !== card1Id && id !== card2Id);
+      const updatedMemories = { ...get().botMemories };
+
+      if (card1Id && card2Id) {
+        if (effectType === 'blind_swap') {
+          updatedMemorized = memorizedCards.filter((id) => id !== card1Id && id !== card2Id);
+        }
+
+        if (gameMode === 'offline') {
+          Object.keys(updatedMemories).forEach((botId) => {
+            let mem = updatedMemories[botId];
+            // Bots forget cards involved in any swap performed by the player
+            mem = botForgetCard(mem, card1Id);
+            mem = botForgetCard(mem, card2Id);
+            updatedMemories[botId] = mem;
+          });
+        }
       }
 
       set({
@@ -238,6 +245,7 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
         peekedCards: [],
         effectPreviewCardIds: [],
         memorizedCards: updatedMemorized,
+        botMemories: updatedMemories,
         turnPhase: 'end_turn',
       });
     },

@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { GameSettings } from './GameSettings';

@@ -4,14 +4,59 @@ import { addLog } from '../helpers';
 import { playTapSuccessSound, playTapPenaltySound } from '@/lib/sounds';
 import { gameApi } from '@/services/gameApi';
 import { toast } from '@/components/ui/use-toast';
+import { botShouldTap, getBotTapDelay } from '@/lib/botAI';
 
 export function createTapActions(set: StoreSet, get: StoreGet) {
   return {
-    openTapWindow: () => {
+    openTapWindow: (discarderIndex: number) => {
+      const { turnPhase, players, discardPile, botMemories, turnNumber, settings, gameMode } = get();
+      if (turnPhase === 'effect') return; // Don't interrupt effects
+
       set({
         turnPhase: 'tap_window',
-        tapState: { phase: 'window', selectedCardIds: [], swapTargets: [], swapsRemaining: 0 },
+        tapState: { 
+          phase: 'window', 
+          selectedCardIds: [], 
+          swapTargets: [], 
+          swapsRemaining: 0,
+          discarderIndex 
+        },
       });
+
+      // Bot Tap Simulation
+      if (gameMode === 'offline') {
+        const topDiscard = discardPile[discardPile.length - 1];
+        if (topDiscard) {
+          players.forEach((p, i) => {
+            if (i > 0) { // Bot
+              const memory = botMemories[p.id];
+              if (memory) {
+                const cardIdToTap = botShouldTap(p, topDiscard.rank, memory, turnNumber, settings.botDifficulty);
+                if (cardIdToTap) {
+                  // Bot decided to tap!
+                  // Use reaction time based on difficulty
+                  const delay = getBotTapDelay(settings.botDifficulty);
+                  setTimeout(() => {
+                    const currentState = get();
+                    if (currentState.tapState?.phase === 'window') {
+                      // Actually perform the tap
+                      set(s => ({
+                        tapState: {
+                          ...s.tapState!,
+                          phase: 'selecting',
+                          selectedCardIds: [cardIdToTap]
+                        }
+                      }));
+                      get().confirmTapDiscard();
+                    }
+                  }, delay);
+                }
+              }
+            }
+          });
+        }
+      }
+
       setTimeout(() => {
         const state = get();
         if (state.tapState?.phase === 'window') {
@@ -27,8 +72,31 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
     },
 
     tapSelectCard: (cardId: string) => {
-      const { tapState } = get();
+      const { tapState, players } = get();
       if (!tapState || tapState.phase !== 'selecting') return;
+
+      // Prevent tapping if you were the discarder
+      let cardOwnerIndex = -1;
+      players.forEach((p, i) => {
+        if (p.cards.some(c => c.id === cardId)) {
+          cardOwnerIndex = i;
+        }
+      });
+
+      // Prevent tapping if you were the discarder and trying to tap your own card
+      // In standard Kaboo, the discarder CANNOT snap their own cards in the window they created.
+      const { myPlayerId } = get();
+      const isMe = players[0].id === myPlayerId; // Simplification for offline
+
+      if (cardOwnerIndex !== -1 && cardOwnerIndex === tapState.discarderIndex && cardOwnerIndex === 0) {
+        toast({
+          title: 'Invalid Action',
+          description: 'You cannot snap your own cards if you were the discarder.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const current = tapState.selectedCardIds;
       set({
         tapState: {
@@ -188,8 +256,16 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
     },
 
     finalizeTap: () => {
-      const { currentPlayerIndex } = get();
+      const { currentPlayerIndex, players, kabooCalled } = get();
       set({ tapState: null });
+
+      // Check if any player has 0 cards and trigger auto-Kaboo if not already called
+      const playerWithNoCardsIndex = players.findIndex(p => p.cards.length === 0);
+      if (playerWithNoCardsIndex !== -1 && !kabooCalled) {
+        get().callKaboo();
+        return;
+      }
+
       if (currentPlayerIndex === 0) {
         set({ turnPhase: 'end_turn' });
       } else {

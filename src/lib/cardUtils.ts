@@ -3,18 +3,37 @@ import type { Card, Rank, Suit, EffectType } from '@/types/game';
 const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
 const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
+export function getSuitToken(suit: Suit): string {
+  switch (suit) {
+    case 'hearts': return '♥';
+    case 'diamonds': return '♦';
+    case 'clubs': return '♣';
+    case 'spades': return '♠';
+    case 'joker': return '🃏';
+    default: return '';
+  }
+}
+
+export function createCard(rank: Rank, suit: Suit): Card {
+  return {
+    id: `${rank}-${suit}-${Math.random().toString(36).substr(2, 9)}`,
+    rank,
+    suit,
+    faceUp: false,
+  };
+}
+
 export function createDeck(): Card[] {
   const deck: Card[] = [];
   for (const suit of SUITS) {
     for (const rank of RANKS) {
-      deck.push({
-        id: `${rank}-${suit}`,
-        suit,
-        rank,
-        faceUp: false,
-      });
+      if (rank === 'joker') continue;
+      deck.push(createCard(rank, suit));
     }
   }
+  // Add 2 Jokers
+  deck.push(createCard('joker', 'joker'));
+  deck.push(createCard('joker', 'joker'));
   return deck;
 }
 
@@ -29,6 +48,7 @@ export function shuffleDeck(deck: Card[]): Card[] {
 
 export function getCardValue(rank: Rank): number {
   switch (rank) {
+    case 'joker': return -1;
     case 'A': return 1;
     case 'J': return 11;
     case 'Q': return 12;
@@ -37,9 +57,12 @@ export function getCardValue(rank: Rank): number {
   }
 }
 
-/** In Kaboo, Red Kings count as 0 */
+/** In Kaboo, Red King, Queen, and Jack count as 0 */
 export function getKabooCardValue(card: Card): number {
-  if (card.rank === 'K' && (card.suit === 'hearts' || card.suit === 'diamonds')) {
+  if (
+    (card.rank === 'K' || card.rank === 'Q' || card.rank === 'J') &&
+    (card.suit === 'hearts' || card.suit === 'diamonds')
+  ) {
     return 0;
   }
   return getCardValue(card.rank);
@@ -91,15 +114,6 @@ export function getEffectDescription(effect: EffectType): string {
     case 'semi_blind_swap': return "Look at an opponent's card, then decide whether to swap.";
     case 'full_vision_swap': return 'Look at two cards, then decide whether to swap them.';
     default: return '';
-  }
-}
-
-export function getSuitToken(suit: Suit): string {
-  switch (suit) {
-    case 'hearts': return '[HEART]';
-    case 'diamonds': return '[DIAMOND]';
-    case 'clubs': return '[CLUB]';
-    case 'spades': return '[SPADE]';
   }
 }
 

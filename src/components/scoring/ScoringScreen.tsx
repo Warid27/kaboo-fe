@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { Confetti } from './Confetti';
@@ -11,7 +10,6 @@ import { SuitIcon } from '../game/SuitIcon';
 
 export function ScoringScreen() {
   const { players, kabooCallerIndex, playAgain, backToLobby, matchOver, roundNumber, settings } = useGameStore();
-  const router = useRouter();
 
   const handlePlayAgain = () => {
     playAgain();
