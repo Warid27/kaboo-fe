@@ -279,7 +279,7 @@ export const GameEngine = {
   /**
    * Handles resolving an effect (peeking or swapping).
    */
-  resolveEffect: (state: EngineState): EngineState => {
+  resolveEffect: (state: EngineState, _cardId: string): EngineState => {
     if (state.turnPhase !== 'effect' || !state.effectType) return state;
 
     // Implementation of effect resolution logic...
