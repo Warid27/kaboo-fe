@@ -74,12 +74,13 @@ function StructureDocs() {
     <>
       <DocSection title="Project Structure" icon={<Folder className="h-6 w-6" />}>
         <CodeBlock title="Directory tree">{`src/
-├── app/                 # Next.js App Router pages
+├── app/                 # Next.js App Router entrypoints
 │   ├── page.tsx         # Home page
 │   ├── layout.tsx       # Root layout
-│   ├── game/            # Game route
-│   ├── lobby/           # Lobby route
-│   └── docs/            # Documentation route
+│   ├── single/          # Offline mode (vs bots)
+│   ├── multiplayer/     # Online mode (vs players)
+│   ├── docs/            # Documentation route
+│   └── dev/             # Internal debug pages (layout, cards)
 ├── components/
 │   ├── docs/            # Documentation pages
 │   ├── game/            # Core gameplay components
@@ -128,6 +129,32 @@ function StructureDocs() {
 ├── test/                # Vitest test suites
 └── types/
     └── game.ts          # Zod schemas & TypeScript types`}</CodeBlock>
+      </DocSection>
+
+      <DocSection title="PWA & Routing" icon={<FileText className="h-6 w-6" />}>
+        <DocTable
+          headers={['Route', 'Purpose']}
+          rows={[
+            ['/', 'Home screen with mode selection and quick start'],
+            ['/single', 'Offline mode vs bots (uses offlineStore and GameEngine)'],
+            ['/multiplayer', 'Online mode vs players (backed by onlineStore)'],
+            ['/docs', 'In-app documentation (player guide + dev docs)'],
+          ]}
+        />
+        <p className="mt-4">
+          The app ships as a Progressive Web App (PWA). A service worker is registered only in
+          production builds and handles precaching of the shell and core assets. When the browser
+          emits <code className="rounded bg-muted px-1.5 py-0.5 text-xs">beforeinstallprompt</code>,
+          the UI shows a toast-based install prompt (&quot;Install Kaboo&quot;) using the Sonner
+          toaster. In development (<code className="rounded bg-muted px-1.5 py-0.5 text-xs">next dev</code>),
+          the service worker is intentionally disabled to avoid stale-cache issues while iterating.
+        </p>
+        <p className="mt-3">
+          PWA metadata lives in <code className="rounded bg-muted px-1.5 py-0.5 text-xs">public/manifest.json</code>{' '}
+          and icons/screenshots in <code className="rounded bg-muted px-1.5 py-0.5 text-xs">public/</code>. The
+          service worker script is <code className="rounded bg-muted px-1.5 py-0.5 text-xs">public/sw.js</code>,
+          registered from <code className="rounded bg-muted px-1.5 py-0.5 text-xs">src/app/providers.tsx</code>.
+        </p>
       </DocSection>
 
       <DocSection title="Architecture" icon={<Blocks className="h-6 w-6" />}>

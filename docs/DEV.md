@@ -1,24 +1,25 @@
 # Developer Documentation & Project Status Analysis
 
 **Version:** 0.1.0  
-**Last Updated:** 2026-02-09  
+**Last Updated:** 2026-02-17  
 **Status:** Alpha / MVP (Offline Mode)
 
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
 2. [Tech Stack](#tech-stack)
-3. [Already Implemented](#already-implemented)
+3. [PWA & Routing](#pwa--routing)
+4. [Already Implemented](#already-implemented)
     - [Core Game Logic](#core-game-logic)
     - [State Management](#state-management)
     - [UI Components & UX](#ui-components--ux)
     - [Offline Mode & AI](#offline-mode--ai)
-4. [Missing Features & Gaps](#missing-features--gaps)
+5. [Missing Features & Gaps](#missing-features--gaps)
     - [Online Multiplayer](#online-multiplayer)
     - [Backend & Persistence](#backend--persistence)
     - [Authentication](#authentication)
     - [Testing & QA](#testing--qa)
-5. [Getting Started](#getting-started)
+6. [Getting Started](#getting-started)
 
 ---
 
@@ -37,6 +38,45 @@
 - **Routing:** Next.js App Router
 
 ---
+
+## PWA & Routing
+
+Kaboo is installable as a Progressive Web App (PWA) with a service worker and web app manifest.
+
+- **Canonical routes:**
+  - `/` – Home screen and mode selection
+  - `/single` – Offline mode vs bots (uses the `offlineStore` and `GameEngine`)
+  - `/multiplayer` – Online mode vs other players (backed by `onlineStore` and the Supabase backend)
+  - `/docs` – In-app documentation (player guide + developer docs)
+- Legacy routes `/offline` and `/online` have been removed from the App Router. Any historic references should be updated to `/single` and `/multiplayer`.
+
+### Service worker behavior
+
+- The service worker script lives at `public/sw.js` and is registered from `src/app/providers.tsx`.
+- Registration is **production-only**:
+  - In `next dev`, the service worker is intentionally not registered to avoid stale-cache issues while developing.
+  - In `next build && next start`, the service worker precaches the shell and core assets, enabling offline play for the main flows.
+- The install experience is driven by the `beforeinstallprompt` event:
+  - When the browser emits `beforeinstallprompt`, the app shows a Sonner toast with an “Install Kaboo” action.
+  - The handler stores the deferred prompt event and calls `prompt()` only when the user clicks the install action.
+
+### Manifest, icons, and screenshots
+
+- Manifest: `public/manifest.json`
+  - Provides app name, start URL, theme, icons, and screenshots.
+  - Uses both `any` and `maskable` icon purposes so Chrome has valid generic icons while still supporting maskable shapes.
+- Icons:
+  - `public/web-app-manifest-192x192.png`
+  - `public/web-app-manifest-512x512.png`
+- Screenshots:
+  - `public/screenshot-mobile.png` – narrow (mobile) preview
+  - `public/screenshot-desktop.png` – wide (desktop) preview
+
+When debugging installability issues, use Chrome DevTools → Application → Manifest to verify that:
+
+- The manifest reports the app as installable.
+- At least one icon is ≥144×144 with `purpose` including `any`.
+- The screenshots match the sizes declared in the manifest.
 
 ## Already Implemented
 
