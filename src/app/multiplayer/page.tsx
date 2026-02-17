@@ -7,7 +7,7 @@ import { OnlineLobbyScreen } from '@/components/lobby/OnlineLobbyScreen';
 import { OnlineGameBoard } from '@/components/game/OnlineGameBoard';
 import { OnlineScoringScreen } from '@/components/scoring/OnlineScoringScreen';
 
-export default function OnlinePage() {
+export default function MultiplayerPage() {
   const router = useRouter();
   const { screen } = useOnlineStore();
 
@@ -17,7 +17,6 @@ export default function OnlinePage() {
     }
   }, [screen, router]);
 
-  // Handle screen switching
   switch (screen) {
     case 'lobby':
       return <OnlineLobbyScreen />;
@@ -27,7 +26,6 @@ export default function OnlinePage() {
       return <OnlineScoringScreen />;
     case 'home':
     default:
-      // If we're redirected home, the useEffect will handle it
       return (
         <div className="flex min-h-screen items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

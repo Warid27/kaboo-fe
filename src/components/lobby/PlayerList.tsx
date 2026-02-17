@@ -16,13 +16,18 @@ export function PlayerList({ players, isOffline = false, settings, myPlayerId, o
   const MAX_PLAYERS = settings.numPlayers || 4;
   const emptySlots = Math.max(0, MAX_PLAYERS - players.length);
 
+  const maxBots = Math.max(0, MAX_PLAYERS - 1);
+  const botsJoined = Math.max(0, players.length - 1);
+
   const me = players.find(p => p.id === myPlayerId);
   const isHost = isOffline || (me?.isHost ?? false);
 
   return (
     <div className="space-y-2">
       <h3 className="font-display text-sm font-semibold text-muted-foreground">
-        Players ({players.length}/{MAX_PLAYERS})
+        {isOffline
+          ? `Bots (${botsJoined}/${maxBots})`
+          : `Players (${players.length}/${MAX_PLAYERS})`}
       </h3>
       <div className="flex flex-col gap-2">
         {players.map((player, index) => (

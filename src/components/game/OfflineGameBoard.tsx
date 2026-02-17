@@ -156,6 +156,7 @@ export function OfflineGameBoard() {
       onDiscardHeldCard={discardHeldCard}
       onDiscardPair={() => {}}
       onEndTurn={handleEndTurn}
+      onReady={readyToPlay}
       onLeaveGame={handleLeaveGame}
       onEndGame={() => {}}
       onActivateTap={activateTap}

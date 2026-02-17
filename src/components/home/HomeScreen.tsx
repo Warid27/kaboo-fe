@@ -27,14 +27,14 @@ export function HomeScreen() {
   const handleCreate = async () => {
     if (!playerName.trim()) return;
     await createGame(playerName);
-    router.push('/online');
+    router.push('/multiplayer');
   };
 
   const handleJoin = async () => {
     if (!playerName.trim()) return;
     try {
       await joinGame(joinCode, playerName);
-      router.push('/online');
+      router.push('/multiplayer');
     } catch {
       // Toast is handled in the store action
     }
@@ -44,7 +44,7 @@ export function HomeScreen() {
     if (playerName.trim()) {
       setOfflinePlayerName(playerName);
     }
-    router.push('/offline');
+    router.push('/single');
   };
 
   return (

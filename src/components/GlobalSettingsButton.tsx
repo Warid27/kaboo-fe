@@ -18,9 +18,10 @@ export function GlobalSettingsButton() {
   // Don't render on server or if not mounted to prevent hydration mismatch
   if (!mounted) return null;
 
-  // Don't show on game page as it has its own menu
-  // The game route is usually /game
-  if (pathname === '/game') return null;
+  // Don't show on actual game routes; they already have their own in-game menu
+  if (pathname === '/game' || pathname.startsWith('/single') || pathname.startsWith('/multiplayer')) {
+    return null;
+  }
 
   return (
     <>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useOfflineStore } from '@/store/offlineStore';
+import { createMockPlayers } from '@/store/helpers';
 import { LobbyView } from './LobbyView';
 
 export function OfflineLobbyScreen() {
@@ -10,18 +11,21 @@ export function OfflineLobbyScreen() {
     updateSettings,
     startOfflineGame,
     resetStore,
+    playerName,
   } = useOfflineStore();
 
-  // In offline mode, the player is always the first one
-  const myPlayerId = players[0]?.id || 'offline-player';
+  const lobbyPlayers =
+    players.length > 0 ? players : createMockPlayers(settings.numPlayers, playerName || 'You');
+
+  const myPlayerId = lobbyPlayers[0]?.id || 'offline-player';
   const isHost = true;
   const isReady = true;
-  const canStart = true; // Host can always start vs bots
+  const canStart = true;
 
   return (
     <LobbyView
       roomCode=""
-      players={players}
+      players={lobbyPlayers}
       isOffline={true}
       isHost={isHost}
       isReady={isReady}
