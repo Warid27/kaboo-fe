@@ -19,11 +19,21 @@ function getCtx(): AudioContext | null {
   return audioCtx;
 }
 
-/** Master volume (0-1). */
 let masterVolume = 0.5;
+
+const backgroundTracks: Record<string, string> = {
+  'kaboo-1': '/kaboo-1.mp3',
+  'kaboo-2': '/kaboo-2.mp3',
+};
+
+let backgroundAudio: HTMLAudioElement | null = null;
+let currentBackgroundSrc: string | null = null;
 
 export function setSoundVolume(v: number) {
   masterVolume = Math.max(0, Math.min(1, v));
+  if (backgroundAudio) {
+    backgroundAudio.volume = masterVolume;
+  }
 }
 
 export function getSoundVolume(): number {
@@ -36,6 +46,34 @@ function isSoundEnabled(category: SoundCategory): boolean {
   } catch {
     return true;
   }
+}
+
+export function startBackgroundMusic() {
+  if (!isSoundEnabled('background')) return;
+  if (typeof window === 'undefined') return;
+  const state = useSettingsStore.getState();
+  const trackKey = state.backgroundTrack ?? 'kaboo-1';
+  const src = backgroundTracks[trackKey] ?? backgroundTracks['kaboo-1'];
+  if (!backgroundAudio) {
+    backgroundAudio = new Audio(src);
+    currentBackgroundSrc = src;
+  } else if (currentBackgroundSrc !== src) {
+    backgroundAudio.pause();
+    backgroundAudio.src = src;
+    currentBackgroundSrc = src;
+    backgroundAudio.load();
+  }
+  backgroundAudio.loop = true;
+  backgroundAudio.volume = masterVolume;
+  backgroundAudio.play().catch(() => undefined);
+}
+
+export function stopBackgroundMusic() {
+  if (!backgroundAudio) return;
+  backgroundAudio.pause();
+  backgroundAudio.currentTime = 0;
+  backgroundAudio = null;
+  currentBackgroundSrc = null;
 }
 
 // ── Helpers ──

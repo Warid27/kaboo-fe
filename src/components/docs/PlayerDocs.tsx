@@ -1,5 +1,5 @@
 import { DocSection, DocTable, Badge } from './DocSection';
-import { Target, GalleryVerticalEnd, RefreshCw, Keyboard, Bot, Trophy, Settings } from 'lucide-react';
+import { Target, GalleryVerticalEnd, RefreshCw, Keyboard, Bot, Trophy, Settings, Volume2 } from 'lucide-react';
 
 export function PlayerDocs() {
   return (
@@ -105,6 +105,15 @@ export function PlayerDocs() {
         <p className="mt-2 text-muted-foreground">
           Keyboard shortcuts can be customized in the Settings menu (<Settings className="inline h-3 w-3" /> icon during gameplay).
         </p>
+      </DocSection>
+
+      <DocSection title="Sound & Settings" icon={<Volume2 className="h-6 w-6" />}>
+        <ul className="list-inside list-disc space-y-1.5">
+          <li>Master and SFX volume sliders in the Settings menu control overall and effect volume.</li>
+          <li>Background music can be toggled on/off and you can choose between Kaboo 1 and Kaboo 2 tracks.</li>
+          <li>Sound types (draw, swap, effects, tap, KABOO, background) can be toggled individually.</li>
+          <li>Theme can be switched between Dark, Light, or System from the same Settings menu.</li>
+        </ul>
       </DocSection>
 
       <DocSection title="Bot Difficulty" icon={<Bot className="h-6 w-6" />}>

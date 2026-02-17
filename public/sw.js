@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaboo-pwa-v1";
+const CACHE_NAME = "kaboo-pwa-v2";
 
 const PRECACHE_URLS = [
   "/",
@@ -73,7 +73,8 @@ self.addEventListener("fetch", (event) => {
   if (
     PRECACHE_URLS.includes(url.pathname) ||
     url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/_next/image")
+    url.pathname.startsWith("/_next/image") ||
+    request.destination === "audio"
   ) {
     event.respondWith(
       caches.match(request).then((cached) => {

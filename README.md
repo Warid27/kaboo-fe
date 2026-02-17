@@ -20,7 +20,7 @@ Kaboo is a modern, interactive web-based card game built with Next.js, React, an
 - **Smooth Animations:** Card movements and interactions are animated for a better user experience.
 - **Responsive Design:** Optimized for both desktop and mobile devices.
 - **Game Logic:** Complex game rules handled via a dedicated state store.
-- **Sound Effects:** Immersive audio feedback for game actions.
+- **Sound & Music:** Procedural sound effects plus background music with a toggle and selectable track.
 
 ## 📦 Installation & Setup
 

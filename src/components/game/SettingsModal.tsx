@@ -13,6 +13,7 @@ import {
   type KeyAction,
   type SoundCategory,
   type ThemeMode,
+  type BackgroundTrack,
 } from '@/store/settingsStore';
 
 interface SettingsModalProps {
@@ -33,6 +34,11 @@ const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: 'system', label: 'System', icon: Laptop },
 ];
 
+const BACKGROUND_TRACK_OPTIONS: { value: BackgroundTrack; label: string }[] = [
+  { value: 'kaboo-1', label: 'Kaboo 1' },
+  { value: 'kaboo-2', label: 'Kaboo 2' },
+];
+
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>('Display');
   const [listeningFor, setListeningFor] = useState<KeyAction | null>(null);
@@ -44,6 +50,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     animationsEnabled,
     soundToggles,
     theme,
+    backgroundTrack,
     setKeyBinding,
     resetKeyBindings,
     setMasterVolume,
@@ -51,6 +58,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     setAnimationsEnabled,
     setSoundToggle,
     setTheme,
+    setBackgroundTrack,
   } = useSettingsStore();
 
   // Key remapping listener
@@ -216,6 +224,28 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     />
                   </div>
 
+                  <div className="rounded-xl bg-muted/30 p-3">
+                    <p className="mb-2 font-display text-sm font-bold text-foreground">
+                      Background Track
+                    </p>
+                    <div className="flex gap-2">
+                      {BACKGROUND_TRACK_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setBackgroundTrack(opt.value)}
+                          className={cn(
+                            'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 font-display text-xs font-bold transition-all',
+                            backgroundTrack === opt.value
+                              ? 'gradient-primary text-primary-foreground glow-primary'
+                              : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Per-sound toggles */}
                   <div className="rounded-xl bg-muted/30 p-3">
                     <p className="mb-2 font-display text-sm font-bold text-foreground">Sound Types</p>
@@ -228,7 +258,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           >
                             <span className="font-body text-sm text-foreground">{label}</span>
                             <Switch
-                              checked={soundToggles[category]}
+                              checked={soundToggles[category] ?? true}
                               onCheckedChange={(v) => setSoundToggle(category, v)}
                             />
                           </div>

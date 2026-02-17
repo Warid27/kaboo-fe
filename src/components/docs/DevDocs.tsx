@@ -154,6 +154,9 @@ function StructureDocs() {
           and icons/screenshots in <code className="rounded bg-muted px-1.5 py-0.5 text-xs">public/</code>. The
           service worker script is <code className="rounded bg-muted px-1.5 py-0.5 text-xs">public/sw.js</code>,
           registered from <code className="rounded bg-muted px-1.5 py-0.5 text-xs">src/app/providers.tsx</code>.
+          Background music tracks are served from <code className="rounded bg-muted px-1.5 py-0.5 text-xs">public/kaboo-1.mp3</code>{' '}
+          and <code className="rounded bg-muted px-1.5 py-0.5 text-xs">public/kaboo-2.mp3</code>, and are cached by the
+          service worker using a runtime cache strategy for <code className="rounded bg-muted px-1.5 py-0.5 text-xs">request.destination === "audio"</code>.
         </p>
       </DocSection>
 
@@ -183,8 +186,8 @@ TurnPhase:  draw → action → effect → tap_window → end_turn`}</CodeBlock>
             ['slices/lobbyActions.ts', 'Game creation, offline bot setup, player joining, and settings management.'],
             ['lib/botAI.ts', 'Bot decision engine with 3 difficulty tiers. Manages bot memory of seen cards and makes probabilistic decisions for draw, swap, effects, and KABOO calls.'],
             ['lib/cardUtils.ts', 'Pure functions: deck creation, shuffling, card value calculation, KABOO scoring, effect type resolution, and suit/rank helpers.'],
-            ['lib/sounds.ts', 'Procedural audio via Web Audio API. No external assets needed — generates card flip, draw, success, and error sounds programmatically.'],
-            ['store/settingsStore.ts', 'Persisted user preferences: key bindings, volume controls, animation toggle. Uses zustand/persist with localStorage.'],
+            ['lib/sounds.ts', 'Procedural sound effects via Web Audio API plus background music loaded from public/kaboo-*.mp3.'],
+            ['store/settingsStore.ts', 'Persisted user preferences: key bindings, volume controls, background track, theme, and toggles. Uses zustand/persist with localStorage.'],
             ['store/devStore.ts', 'Dev-only layout debugging state: grid overlay, card scaling, pile offsets, hand gap, and player position adjustments.'],
           ]}
         />
@@ -237,7 +240,7 @@ function RoadmapDocs() {
           <li>Theme support (Light/Dark/System)</li>
           <li>Card flip animations with 3D perspective</li>
           <li>Flying card animations between positions</li>
-          <li>Procedural sound effects (Web Audio API)</li>
+          <li>Procedural sound effects (Web Audio API) and background music with selectable track</li>
           <li>Keyboard shortcuts (fully customizable)</li>
           <li>Turn timer with configurable duration</li>
           <li>Turn-by-turn action log</li>

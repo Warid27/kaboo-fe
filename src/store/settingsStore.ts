@@ -61,7 +61,15 @@ export function getKeyDisplayName(code: string): string {
 
 // ── Sound Toggle Types ──
 
-export type SoundCategory = 'draw' | 'swap' | 'discard' | 'effect' | 'peek' | 'tap' | 'kaboo';
+export type SoundCategory =
+  | 'draw'
+  | 'swap'
+  | 'discard'
+  | 'effect'
+  | 'peek'
+  | 'tap'
+  | 'kaboo'
+  | 'background';
 
 export const SOUND_CATEGORY_LABELS: Record<SoundCategory, string> = {
   draw: 'Draw',
@@ -71,11 +79,12 @@ export const SOUND_CATEGORY_LABELS: Record<SoundCategory, string> = {
   peek: 'Peek',
   tap: 'Tap',
   kaboo: 'KABOO',
+  background: 'Background Music',
 };
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 
-// ── Settings Store ──
+export type BackgroundTrack = 'kaboo-1' | 'kaboo-2';
 
 interface SettingsState {
   keyBindings: Record<KeyAction, string>;
@@ -84,6 +93,7 @@ interface SettingsState {
   animationsEnabled: boolean;
   soundToggles: Record<SoundCategory, boolean>;
   theme: ThemeMode;
+  backgroundTrack: BackgroundTrack;
   setKeyBinding: (action: KeyAction, code: string) => void;
   resetKeyBindings: () => void;
   setMasterVolume: (v: number) => void;
@@ -91,6 +101,7 @@ interface SettingsState {
   setAnimationsEnabled: (v: boolean) => void;
   setSoundToggle: (category: SoundCategory, enabled: boolean) => void;
   setTheme: (theme: ThemeMode) => void;
+  setBackgroundTrack: (track: BackgroundTrack) => void;
 }
 
 const DEFAULT_SOUND_TOGGLES: Record<SoundCategory, boolean> = {
@@ -101,6 +112,7 @@ const DEFAULT_SOUND_TOGGLES: Record<SoundCategory, boolean> = {
   peek: true,
   tap: true,
   kaboo: true,
+  background: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -112,6 +124,7 @@ export const useSettingsStore = create<SettingsState>()(
       animationsEnabled: true,
       soundToggles: { ...DEFAULT_SOUND_TOGGLES },
       theme: 'dark' as ThemeMode,
+      backgroundTrack: 'kaboo-1',
       setKeyBinding: (action, code) =>
         set((s) => ({ keyBindings: { ...s.keyBindings, [action]: code } })),
       resetKeyBindings: () => set({ keyBindings: { ...DEFAULT_KEY_BINDINGS } }),
@@ -121,6 +134,7 @@ export const useSettingsStore = create<SettingsState>()(
       setSoundToggle: (category, enabled) =>
         set((s) => ({ soundToggles: { ...s.soundToggles, [category]: enabled } })),
       setTheme: (theme) => set({ theme }),
+      setBackgroundTrack: (track) => set({ backgroundTrack: track }),
     }),
     {
       name: 'kaboo-settings',

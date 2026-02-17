@@ -59,6 +59,7 @@ Kaboo is installable as a Progressive Web App (PWA) with a service worker and we
 - The install experience is driven by the `beforeinstallprompt` event:
   - When the browser emits `beforeinstallprompt`, the app shows a Sonner toast with an “Install Kaboo” action.
   - The handler stores the deferred prompt event and calls `prompt()` only when the user clicks the install action.
+- Background music tracks (`/kaboo-1.mp3`, `/kaboo-2.mp3`) are served from `public/` and cached at runtime by the service worker using a dedicated audio cache when `request.destination === "audio"`. This keeps music responsive while avoiding bloating the precache.
 
 ### Manifest, icons, and screenshots
 
@@ -120,6 +121,7 @@ A polished user interface using Shadcn UI components and custom game elements.
     - `ActionButtons`: Context-aware buttons for game actions.
     - `EffectOverlay`: Visual cues during card effect resolution.
 - **Lobby:** Functional setup screen for customizing game rules (bot difficulty, player count).
+- **Settings:** In-game Settings modal exposes key bindings, master/SFX volume, per-sound-category toggles (including background music), theme mode, and a selectable background music track.
 
 ### Offline Mode & AI
 A robust single-player mode against computer opponents.

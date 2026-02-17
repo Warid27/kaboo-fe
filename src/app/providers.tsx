@@ -6,6 +6,7 @@ import { Toaster as Sonner, toast as sonnerToast } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSettingsStore } from "@/store/settingsStore";
+import { startBackgroundMusic, stopBackgroundMusic } from "@/lib/sounds";
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useSettingsStore((s) => s.theme);
@@ -36,6 +37,8 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const backgroundEnabled = useSettingsStore((s) => s.soundToggles.background ?? true);
+  const backgroundTrack = useSettingsStore((s) => s.backgroundTrack);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -52,6 +55,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (backgroundEnabled) {
+      startBackgroundMusic();
+    } else {
+      stopBackgroundMusic();
+    }
+  }, [backgroundEnabled, backgroundTrack]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
