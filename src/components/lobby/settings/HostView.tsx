@@ -1,9 +1,13 @@
 import { motion } from 'framer-motion';
-import { useGameStore } from '@/store/gameStore';
+import { GameSettings } from '@/types/game';
 import { TIMER_OPTIONS, TARGET_SCORE_OPTIONS, PLAYER_COUNTS } from './constants';
 
-export function HostView() {
-  const { settings, updateSettings } = useGameStore();
+interface HostViewProps {
+  settings: GameSettings;
+  updateSettings: (partial: Partial<GameSettings>) => void;
+}
+
+export function HostView({ settings, updateSettings }: HostViewProps) {
 
   return (
     <motion.div

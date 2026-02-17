@@ -1,6 +1,5 @@
-import { describe, test, expect, beforeEach } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 28: Window Resize During Effect Selection', () => {
   beforeEach(() => {
@@ -8,11 +7,10 @@ describe('Scenario 28: Window Resize During Effect Selection', () => {
   });
 
   test('Selection state should persist through window resize events', async () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
 
     // 1. Setup: King effect active (full_vision_swap)
-    useGameStore.setState({
-      gameMode: 'offline',
+    useOfflineStore.setState({
       gamePhase: 'playing',
       currentPlayerIndex: 0,
       effectType: 'full_vision_swap',
@@ -39,22 +37,22 @@ describe('Scenario 28: Window Resize During Effect Selection', () => {
     });
 
     // 2. Select first card
-    await store.resolveEffect('c1');
-    expect(useGameStore.getState().selectedCards).toHaveLength(1);
-    expect(useGameStore.getState().selectedCards[0]).toBe('c1');
+    store.selectCard('c1');
+    expect(useOfflineStore.getState().selectedCards).toHaveLength(1);
+    expect(useOfflineStore.getState().selectedCards[0]).toBe('c1');
 
     // 3. Simulate Window Resize
     global.dispatchEvent(new Event('resize'));
     
     // Assert: Selection state is still there
-    expect(useGameStore.getState().selectedCards).toHaveLength(1);
-    expect(useGameStore.getState().selectedCards[0]).toBe('c1');
+    expect(useOfflineStore.getState().selectedCards).toHaveLength(1);
+    expect(useOfflineStore.getState().selectedCards[0]).toBe('c1');
 
     // 4. Select second card
-    await store.resolveEffect('c3');
+    store.selectCard('c3');
     
     // Assert: Effect continues normally
-    expect(useGameStore.getState().selectedCards).toHaveLength(2);
-    expect(useGameStore.getState().effectStep).toBe('preview');
+    expect(useOfflineStore.getState().selectedCards).toHaveLength(2);
+    expect(useOfflineStore.getState().effectStep).toBe('preview');
   });
 });

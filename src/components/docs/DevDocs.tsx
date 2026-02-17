@@ -114,11 +114,12 @@ function StructureDocs() {
 │   ├── sounds.ts        # Web Audio API sound effects
 │   └── utils.ts         # General helpers (cn, etc.)
 ├── store/               # Zustand state management
-│   ├── gameStore.ts     # Root store & interface
+│   ├── offlineStore.ts  # Offline game store (engine-backed)
+│   ├── onlineStore.ts   # Online game store (sync-backed)
 │   ├── settingsStore.ts # Persisted user preferences
 │   ├── devStore.ts      # Dev tools state
 │   ├── helpers.ts       # Store utility functions
-│   └── slices/          # Modular action slices
+│   └── slices/          # Modular action slices (legacy)
 │       ├── lobbyActions.ts   # Game creation, player setup
 │       ├── cardActions.ts    # Draw, swap, discard
 │       ├── effectActions.ts  # Peek, blind swap, etc.
@@ -144,7 +145,9 @@ TurnPhase:  draw → action → effect → tap_window → end_turn`}</CodeBlock>
         <DocTable
           headers={['File', 'Purpose']}
           rows={[
-            ['gameStore.ts', 'Root Zustand store. Defines the GameStore interface, initial state constants, and composes all action slices. This is the single source of truth for the entire game.'],
+            ['offlineStore.ts', 'Core offline store. Uses gameEngine.ts for all state transitions. The primary store for single-player/local games.'],
+            ['onlineStore.ts', 'Core online store. Synchronizes state with the Supabase backend and handles multiplayer communication.'],
+            ['engine/gameEngine.ts', 'The heart of the game. Contains pure, side-effect-free logic for all game rules and state transitions.'],
             ['types/game.ts', 'All data types validated with Zod schemas — Card, Player, GameSettings, game phase enums, avatar colors, and action schemas.'],
             ['slices/cardActions.ts', 'Handles draw, swap, discard flows. Manages heldCard state and card movement between piles and player hands.'],
             ['slices/effectActions.ts', 'Manages special card effects (peek own, peek opponent, blind swap, semi-blind swap). Controls the effect overlay UI state.'],

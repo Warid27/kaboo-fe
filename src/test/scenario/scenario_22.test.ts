@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 22: Tap Blocked After Auto-Kaboo (Deck Exhaustion)', () => {
   beforeEach(() => {
@@ -10,7 +10,7 @@ describe('Scenario 22: Tap Blocked After Auto-Kaboo (Deck Exhaustion)', () => {
 
   test('should not open tap window and transition to reveal when deck is exhausted', async () => {
     // Setup: 1 card in deck, player has matching card for what will be discarded
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: [
           { id: 'p1-c1', rank: '5' as const, suit: 'hearts' as const, faceUp: false }
@@ -35,27 +35,27 @@ describe('Scenario 22: Tap Blocked After Auto-Kaboo (Deck Exhaustion)', () => {
     });
 
     // 1. Player draws the final card
-    await useGameStore.getState().drawCard();
-    expect(useGameStore.getState().drawPile.length).toBe(0);
-    expect(useGameStore.getState().heldCard?.id).toBe('d1');
+    useOfflineStore.getState().drawCard();
+    expect(useOfflineStore.getState().drawPile.length).toBe(0);
+    expect(useOfflineStore.getState().heldCard?.id).toBe('d1');
 
     // 2. Player discards the drawn card (Rank 8, which has an effect, but we check if turn ends)
-    await useGameStore.getState().discardHeldCard();
+    useOfflineStore.getState().discardHeldCard();
     
     // Peek effect triggers. Resolve it.
-    if (useGameStore.getState().turnPhase === 'effect') {
-      await useGameStore.getState().resolveEffect('p1-c1');
+    if (useOfflineStore.getState().turnPhase === 'effect') {
+      useOfflineStore.getState().selectCard('p1-c1');
     }
 
     // Advance timers for the peek animation
     vi.runAllTimers();
 
     // Now turnPhase should be 'end_turn'. We need to call endTurn() to trigger deck check.
-    expect(useGameStore.getState().turnPhase).toBe('end_turn');
-    useGameStore.getState().endTurn();
+    expect(useOfflineStore.getState().turnPhase).toBe('end_turn');
+    useOfflineStore.getState().endTurn();
 
     // After endTurn, it should detect empty deck and go to reveal
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     expect(state.gamePhase).toBe('reveal');
     expect(state.tapState).toBeNull();
   });

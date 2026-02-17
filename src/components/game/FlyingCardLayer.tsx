@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useGameStore, type FlyingCardEntry } from '@/store/gameStore';
-import type { Card } from '@/types/game';
+import type { Card, FlyingCardEntry } from '@/types/game';
 import { isRedSuit } from '@/lib/cardUtils';
 import { cn } from '@/lib/utils';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
@@ -15,20 +14,18 @@ interface ActiveFlyingCard {
 }
 
 export interface FlyingCardLayerProps {
-  flyingCards?: FlyingCardEntry[];
-  onRemoveFlyingCard?: (id: string) => void;
+  flyingCards: FlyingCardEntry[];
+  onRemoveFlyingCard: (id: string) => void;
 }
 
-export function FlyingCardLayer(props: FlyingCardLayerProps) {
-  const store = useGameStore();
-  const flyingCards = props.flyingCards ?? store.flyingCards;
-  const removeFlyingCard = props.onRemoveFlyingCard ?? store.removeFlyingCard;
-  
+export function FlyingCardLayer({ flyingCards, onRemoveFlyingCard }: FlyingCardLayerProps) {
   const [active, setActive] = useState<ActiveFlyingCard[]>([]);
   const processedIds = useRef(new Set<string>());
   const anim = useAnimationConfig();
 
   useEffect(() => {
+    if (!flyingCards) return;
+    
     flyingCards.forEach((fc) => {
       if (processedIds.current.has(fc.id)) return;
       processedIds.current.add(fc.id);
@@ -37,7 +34,7 @@ export function FlyingCardLayer(props: FlyingCardLayerProps) {
       const toEl = document.querySelector(`[data-card-anchor="${fc.toAnchor}"]`);
 
       if (!fromEl || !toEl) {
-        removeFlyingCard(fc.id);
+        onRemoveFlyingCard(fc.id);
         return;
       }
 
@@ -60,12 +57,12 @@ export function FlyingCardLayer(props: FlyingCardLayerProps) {
         },
       ]);
     });
-  }, [flyingCards, removeFlyingCard]);
+  }, [flyingCards, onRemoveFlyingCard]);
 
   const handleComplete = (id: string) => {
     setActive((prev) => prev.filter((c) => c.id !== id));
     processedIds.current.delete(id);
-    removeFlyingCard(id);
+    onRemoveFlyingCard(id);
   };
 
   if (active.length === 0) return null;

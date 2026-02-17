@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 23: Effect During Kaboo Final Round', () => {
   beforeEach(() => {
@@ -9,10 +9,10 @@ describe('Scenario 23: Effect During Kaboo Final Round', () => {
   });
 
   test('should allow special effects to trigger during the final round after Kaboo is called', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // Setup: 3 players. P3 called Kaboo. It is now P1's turn in the final round.
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: [
           { id: 'p1-c1', rank: '5' as const, suit: 'hearts' as const, faceUp: false }
@@ -43,23 +43,23 @@ describe('Scenario 23: Effect During Kaboo Final Round', () => {
 
     // 1. P1 draws a Jack (Blind Swap)
     store.drawCard();
-    expect(useGameStore.getState().turnPhase).toBe('action');
-    expect(useGameStore.getState().heldCard?.rank).toBe('J');
+    expect(useOfflineStore.getState().turnPhase).toBe('action');
+    expect(useOfflineStore.getState().heldCard?.rank).toBe('J');
 
     // 2. P1 discards the Jack
     store.discardHeldCard();
     
     // 3. Verify effect triggers
-    expect(useGameStore.getState().effectType).toBe('blind_swap');
-    expect(useGameStore.getState().turnPhase).toBe('effect');
+    expect(useOfflineStore.getState().effectType).toBe('blind_swap');
+    expect(useOfflineStore.getState().turnPhase).toBe('effect');
 
     // 4. Resolve effect: swap P1-c1 with P3-c1
-    store.resolveEffect('p1-c1');
-    store.resolveEffect('p3-c1');
+    store.selectCard('p1-c1');
+    store.selectCard('p3-c1');
     store.confirmEffect();
 
     // 5. Verify swap happened
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     expect(state.players[0].cards[0].id).toBe('p3-c1');
     expect(state.players[2].cards[0].id).toBe('p1-c1');
     expect(state.turnPhase).toBe('end_turn');

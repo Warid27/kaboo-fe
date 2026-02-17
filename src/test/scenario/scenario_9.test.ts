@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '@/store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore, resetStore } from '@/store/offlineStore';
 import { Rank, Suit, Card } from '@/types/game';
 
 function createMockCard(rank: Rank, suit: Suit, id: string): Card {
@@ -13,12 +12,10 @@ describe('Scenario 9: Kaboo Call with Tied Scores', () => {
     vi.useFakeTimers();
   });
 
-  it('should penalize the Kaboo caller if they tie with another player', async () => {
-    const store = useGameStore.getState();
+  it('should penalize the Kaboo caller if they tie with another player', () => {
+    const store = useOfflineStore.getState();
     
     // Setup: 2 players with 10 points each
-    // Player 1: [3, 2, 5] = 10
-    // Bot: [4, 6] = 10
     const p1Cards = [
       createMockCard('3', 'hearts', 'p1-c1'),
       createMockCard('2', 'clubs', 'p1-c2'),
@@ -29,18 +26,18 @@ describe('Scenario 9: Kaboo Call with Tied Scores', () => {
       createMockCard('6', 'hearts', 'b1-c2'),
     ];
 
-    useGameStore.setState({
+    useOfflineStore.setState({
       gamePhase: 'playing',
       players: [
         { id: 'p1', name: 'Player 1', cards: p1Cards, score: 0, totalScore: 0, avatarColor: '', isHost: true, isReady: true },
         { id: 'bot', name: 'Bot', cards: botCards, score: 0, totalScore: 0, avatarColor: '', isHost: false, isReady: true }
       ],
       currentPlayerIndex: 0,
-      settings: { ...useGameStore.getState().settings, targetScore: '100' }
+      settings: { ...useOfflineStore.getState().settings, targetScore: '100' }
     });
 
     // Player 1 calls Kaboo
-    useGameStore.setState({
+    useOfflineStore.setState({
       kabooCalled: true,
       kabooCallerIndex: 0,
       gamePhase: 'kaboo_final',
@@ -48,12 +45,12 @@ describe('Scenario 9: Kaboo Call with Tied Scores', () => {
     });
 
     // Verify kabooCallerIndex is set
-    expect(useGameStore.getState().kabooCallerIndex).toBe(0);
+    expect(useOfflineStore.getState().kabooCallerIndex).toBe(0);
 
     // Final round proceeds... for this test we jump to reveal
     store.revealAllCards();
 
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     // Player 1 score should be 10 + 20 (penalty) = 30
     expect(state.players[0].score).toBe(30);
     // Bot score should be 10

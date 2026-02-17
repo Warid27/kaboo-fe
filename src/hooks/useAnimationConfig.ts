@@ -14,7 +14,6 @@ export function useAnimationConfig() {
     springStiff: enabled
       ? { type: 'spring' as const, stiffness: 400, damping: 30 }
       : { duration: 0 },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initial: (props: Record<string, any>) => (enabled ? props : false),
+    initial: <T extends Record<string, unknown>>(props: T) => (enabled ? props : false),
   };
 }

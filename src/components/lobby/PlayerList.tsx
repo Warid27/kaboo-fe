@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
-import type { Player } from '@/types/game';
-import { useGameStore } from '@/store/gameStore';
+import type { Player, GameSettings } from '@/types/game';
 import { DifficultyBadge } from '@/components/game/DifficultyBadge';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
@@ -8,10 +7,12 @@ import { X } from 'lucide-react';
 interface PlayerListProps {
   players: Player[];
   isOffline?: boolean;
+  settings: GameSettings;
+  myPlayerId: string;
+  onKickPlayer?: (id: string) => void;
 }
 
-export function PlayerList({ players, isOffline = false }: PlayerListProps) {
-  const { settings, myPlayerId, kickPlayer } = useGameStore();
+export function PlayerList({ players, isOffline = false, settings, myPlayerId, onKickPlayer }: PlayerListProps) {
   const MAX_PLAYERS = settings.numPlayers || 4;
   const emptySlots = Math.max(0, MAX_PLAYERS - players.length);
 
@@ -85,7 +86,7 @@ export function PlayerList({ players, isOffline = false }: PlayerListProps) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => kickPlayer(player.id)}
+                    onClick={() => onKickPlayer?.(player.id)}
                     title="Kick player"
                   >
                     <X className="h-4 w-4" />
@@ -96,7 +97,7 @@ export function PlayerList({ players, isOffline = false }: PlayerListProps) {
 
             {index > 0 && isOffline && (
               <div className="ml-auto">
-                <DifficultyBadge difficulty={useGameStore.getState().settings.botDifficulty} />
+                <DifficultyBadge difficulty={settings.botDifficulty} />
               </div>
             )}
           </motion.div>

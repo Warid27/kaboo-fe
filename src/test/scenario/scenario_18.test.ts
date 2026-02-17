@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 18: All Red Royals (Score = 0 Race)', () => {
   beforeEach(() => {
@@ -9,10 +9,10 @@ describe('Scenario 18: All Red Royals (Score = 0 Race)', () => {
   });
 
   test('should calculate 0 points for a hand full of red royals', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // Setup: Player 1 has Red King, Red Queen, Red Jack, and another Red King
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         {
           id: 'p1',
@@ -51,7 +51,7 @@ describe('Scenario 18: All Red Royals (Score = 0 Race)', () => {
     // Manually trigger reveal all cards to check scoring
     store.revealAllCards();
 
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     // Player 1 score should be 0 (0 + 0 + 0 + 0)
     expect(state.players[0].score).toBe(0);
     // Bot score should be 2

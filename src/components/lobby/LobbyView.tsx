@@ -1,61 +1,47 @@
 'use client';
 
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { GameSettings } from './GameSettings';
 import { PlayerList } from './PlayerList';
 import { Bot, Zap } from 'lucide-react';
+import type { Player, GameSettings as IGameSettings } from '@/types/game';
 
-export function LobbyScreen() {
-  const { roomCode, players, startGame, endGame, backToLobby, gameMode, myPlayerId, toggleReady, checkGameState } = useGameStore();
-  
-  const isOffline = gameMode === 'offline';
-  const me = players.find(p => p.id === myPlayerId);
-  // In online mode, check the player's isHost property which is set by the store based on backend order
-  const isHost = isOffline || (me?.isHost ?? false);
-  
-  const isReady = me?.isReady;
+interface LobbyViewProps {
+  roomCode: string;
+  players: Player[];
+  isOffline: boolean;
+  isHost: boolean;
+  isReady: boolean;
+  canStart: boolean;
+  onStart: () => void;
+  onLeave: () => void;
+  onEndGame?: () => void;
+  onToggleReady: () => void;
+  onBack: () => void;
+  settings: IGameSettings;
+  updateSettings: (partial: Partial<IGameSettings>) => void;
+  myPlayerId: string;
+  onKickPlayer?: (id: string) => void;
+}
 
-  const handleEndGame = async () => {
-    if (confirm('Are you sure you want to end the game for everyone?')) {
-      await endGame();
-    }
-  };
-
-  const handleLeaveGame = async () => {
-    if (confirm('Are you sure you want to leave the game?')) {
-      backToLobby();
-    }
-  };
-
-  // Check if all other players are ready (host is ready by definition of being able to click start)
-  const otherPlayers = players.filter(p => !p.isHost);
-  const allOthersReady = otherPlayers.length > 0 && otherPlayers.every(p => p.isReady);
-  const canStart = isOffline || (players.length >= 2 && allOthersReady);
-
-  useEffect(() => {
-    if (gameMode === 'offline') return;
-    
-    // Initial check
-    checkGameState();
-
-    const interval = setInterval(() => {
-        checkGameState();
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [gameMode, checkGameState]);
-
-  const handleBack = () => {
-    backToLobby();
-  };
-
-  const handleStart = async () => {
-    await startGame();
-  };
-
+export function LobbyView({
+  roomCode,
+  players,
+  isOffline,
+  isHost,
+  isReady,
+  canStart,
+  onStart,
+  onLeave,
+  onEndGame,
+  onToggleReady,
+  onBack,
+  settings,
+  updateSettings,
+  myPlayerId,
+  onKickPlayer,
+}: LobbyViewProps) {
   return (
     <div className="flex min-h-screen flex-col items-center bg-background px-4 py-8">
       {/* Header */}
@@ -65,7 +51,7 @@ export function LobbyScreen() {
         className="mb-6 text-center"
       >
         <button
-          onClick={handleBack}
+          onClick={onBack}
           className="mb-4 font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Back
@@ -126,7 +112,13 @@ export function LobbyScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <PlayerList players={players} isOffline={isOffline} />
+          <PlayerList 
+            players={players} 
+            isOffline={isOffline} 
+            settings={settings}
+            myPlayerId={myPlayerId}
+            onKickPlayer={onKickPlayer}
+          />
         </motion.div>
 
         {/* Waiting animation */}
@@ -158,7 +150,12 @@ export function LobbyScreen() {
         </motion.div>
 
         {/* Settings */}
-        <GameSettings isHost={isHost} />
+        <GameSettings 
+          settings={settings} 
+          updateSettings={updateSettings}
+          isHost={isHost}
+          isOffline={isOffline}
+        />
 
         {/* Start Button */}
         <motion.div
@@ -170,7 +167,7 @@ export function LobbyScreen() {
           {isHost ? (
             <>
               <Button
-                onClick={handleStart}
+                onClick={onStart}
                 disabled={!canStart}
                 className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
                   canStart
@@ -194,9 +191,9 @@ export function LobbyScreen() {
                 )}
               </Button>
               
-              {!isOffline && (
+              {!isOffline && onEndGame && (
                 <Button
-                  onClick={handleEndGame}
+                  onClick={onEndGame}
                   variant="outline"
                   className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
@@ -207,7 +204,7 @@ export function LobbyScreen() {
           ) : (
             <>
               <Button
-                onClick={() => toggleReady()}
+                onClick={onToggleReady}
                 className={`h-14 w-full rounded-xl font-display text-xl font-bold transition-all gap-2 ${
                     isReady 
                     ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20' 
@@ -218,7 +215,7 @@ export function LobbyScreen() {
               </Button>
               
               <Button
-                onClick={handleLeaveGame}
+                onClick={onLeave}
                 variant="outline"
                 className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >

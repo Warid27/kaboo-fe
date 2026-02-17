@@ -1,36 +1,33 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Search, Shuffle, ScanEye, Crown, Sparkles } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
-import { getEffectName, getEffectDescription } from '@/lib/cardUtils';
 import { Button } from '@/components/ui/button';
 import { KeyHint } from './KeyHint';
-import type { EffectType, Player } from '@/types/game';
+import { getEffectName, getEffectDescription } from '@/lib/cardUtils';
+import type { Player, EffectType } from '@/types/game';
 
 export interface EffectOverlayProps {
-  showEffectOverlay?: boolean;
-  effectType?: EffectType;
-  effectStep?: 'select' | 'preview' | 'resolve' | null;
-  selectedCards?: string[];
-  effectPreviewCardIds?: string[];
-  effectTimeRemaining?: number;
-  players?: Player[];
-  onDecline?: () => void;
-  onConfirm?: () => void;
+  showEffectOverlay: boolean;
+  effectType: EffectType;
+  effectStep: 'select' | 'preview' | 'resolve' | null;
+  selectedCards: string[];
+  effectPreviewCardIds: string[];
+  effectTimeRemaining: number;
+  players: Player[];
+  onDecline: () => void;
+  onConfirm: () => void;
 }
 
-export function EffectOverlay(props: EffectOverlayProps) {
-  const store = useGameStore();
-
-  const showEffectOverlay = props.showEffectOverlay ?? store.showEffectOverlay;
-  const effectType = props.effectType ?? store.effectType;
-  const effectStep = props.effectStep ?? store.effectStep;
-  const selectedCards = props.selectedCards ?? store.selectedCards;
-  const effectPreviewCardIds = props.effectPreviewCardIds ?? store.effectPreviewCardIds;
-  const effectTimeRemaining = props.effectTimeRemaining ?? store.effectTimeRemaining;
-  const players = props.players ?? store.players;
-  const declineEffect = props.onDecline ?? store.declineEffect;
-  const confirmEffect = props.onConfirm ?? store.confirmEffect;
-
+export function EffectOverlay({
+  showEffectOverlay,
+  effectType,
+  effectStep,
+  selectedCards,
+  effectPreviewCardIds,
+  effectTimeRemaining,
+  players,
+  onDecline: declineEffect,
+  onConfirm: confirmEffect,
+}: EffectOverlayProps) {
   if (!showEffectOverlay || !effectType) return null;
 
   const name = getEffectName(effectType);

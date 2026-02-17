@@ -1,19 +1,19 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 import { createCard } from '../../lib/cardUtils';
 
 describe('Scenario 20: Simultaneous Kaboo Calls', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    const store = useGameStore.getState();
-    store.resetGame();
+    resetStore();
   });
 
   test('should only process the first Kaboo call and ignore subsequent ones', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
 
     // 1. Setup
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: [createCard('2' as const, 'hearts' as const)], score: 0, totalScore: 0, isHost: true, isReady: true },
         { id: 'bot', name: 'Bot', avatarColor: '#00FF00', cards: [createCard('10' as const, 'diamonds' as const)], score: 0, totalScore: 0, isHost: false, isReady: true },
@@ -33,7 +33,7 @@ describe('Scenario 20: Simultaneous Kaboo Calls', () => {
     // 2. Player calls Kaboo
     store.callKaboo();
     
-    let state = useGameStore.getState();
+    let state = useOfflineStore.getState();
     expect(state.kabooCalled).toBe(true);
     expect(state.kabooCallerIndex).toBe(0);
     expect(state.gamePhase).toBe('kaboo_final');
@@ -42,7 +42,7 @@ describe('Scenario 20: Simultaneous Kaboo Calls', () => {
     // In our implementation, callKaboo should check if kabooCalled is already true.
     store.callKaboo();
     
-    state = useGameStore.getState();
+    state = useOfflineStore.getState();
     // Caller index should still be 0
     expect(state.kabooCallerIndex).toBe(0);
   });

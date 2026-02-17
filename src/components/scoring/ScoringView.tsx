@@ -2,35 +2,40 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { Confetti } from './Confetti';
 import { Crown, Trophy, Home, RefreshCw } from 'lucide-react';
 import { SuitIcon } from '../game/SuitIcon';
+import type { Player, GameSettings } from '@/types/game';
 
-export function ScoringScreen() {
-  const { players, kabooCallerIndex, playAgain, backToLobby, matchOver, roundNumber, settings } = useGameStore();
+interface ScoringViewProps {
+  players: Player[];
+  kabooCallerIndex: number | null;
+  onPlayAgain: () => void;
+  onBackToLobby: () => void;
+  matchOver: boolean;
+  roundNumber: number;
+  settings: GameSettings;
+}
 
-  const handlePlayAgain = () => {
-    playAgain();
-    // In unified mode, the screen state handles navigation
-  };
-
-  const handleBackToLobby = () => {
-    backToLobby();
-  };
-
+export function ScoringView({
+  players,
+  kabooCallerIndex,
+  onPlayAgain,
+  onBackToLobby,
+  matchOver,
+  roundNumber,
+  settings
+}: ScoringViewProps) {
   const sortedPlayers = useMemo(() => {
     return [...players].sort((a, b) => a.score - b.score);
   }, [players]);
 
-  // For match over, sort by total score
   const sortedByTotal = useMemo(() => {
     return [...players].sort((a, b) => a.totalScore - b.totalScore);
   }, [players]);
 
   const winnerId = sortedPlayers[0]?.id;
-  // const lowestScore = sortedPlayers[0]?.score ?? 0;
   const matchWinnerId = matchOver ? sortedByTotal[0]?.id : null;
   const targetScore = parseInt(settings.targetScore);
 
@@ -38,7 +43,6 @@ export function ScoringScreen() {
     <div className="flex min-h-screen flex-col items-center bg-background px-4 py-8">
       <Confetti />
 
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -65,13 +69,11 @@ export function ScoringScreen() {
         )}
       </motion.div>
 
-      {/* Scoreboard */}
       <div className="w-full max-w-md space-y-3">
         {(matchOver ? sortedByTotal : sortedPlayers).map((player, index) => {
           const isRoundWinner = player.id === winnerId;
           const isMatchWinner = matchOver && player.id === matchWinnerId;
           const isKabooCaller = players.indexOf(player) === kabooCallerIndex;
-          // const gotPenalty = isKabooCaller && player.score > lowestScore + 20;
 
           return (
             <motion.div
@@ -85,7 +87,6 @@ export function ScoringScreen() {
                   : 'border-border bg-card'
               }`}
             >
-              {/* Rank */}
               <div
                 className={`flex h-10 w-10 items-center justify-center rounded-full font-display text-lg font-bold ${
                   index === 0
@@ -98,7 +99,6 @@ export function ScoringScreen() {
                 {index + 1}
               </div>
 
-              {/* Player info */}
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <div
@@ -127,7 +127,6 @@ export function ScoringScreen() {
                   )}
                 </div>
 
-                {/* Card values breakdown */}
                 <div className="mt-1 flex gap-1">
                   {player.cards.map((card) => (
                     <span
@@ -141,7 +140,6 @@ export function ScoringScreen() {
                 </div>
               </div>
 
-              {/* Score */}
               <div className="text-right">
                 <motion.span
                   initial={{ scale: 0 }}
@@ -169,7 +167,6 @@ export function ScoringScreen() {
         })}
       </div>
 
-      {/* Progress bar (when not match over) */}
       {!matchOver && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -194,7 +191,6 @@ export function ScoringScreen() {
         </motion.div>
       )}
 
-      {/* Actions */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -202,7 +198,7 @@ export function ScoringScreen() {
         className="mt-8 flex w-full max-w-md gap-3"
       >
         <Button
-          onClick={handlePlayAgain}
+          onClick={onPlayAgain}
           className="flex-1 h-14 rounded-xl font-display text-lg font-bold gradient-primary text-primary-foreground glow-primary hover:brightness-110 transition-all gap-2"
         >
           {matchOver ? (
@@ -216,7 +212,7 @@ export function ScoringScreen() {
           )}
         </Button>
         <Button
-          onClick={handleBackToLobby}
+          onClick={onBackToLobby}
           variant="outline"
           className="flex-1 h-14 rounded-xl font-display text-lg font-bold gap-2"
         >

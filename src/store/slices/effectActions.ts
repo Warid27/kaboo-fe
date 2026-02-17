@@ -3,17 +3,18 @@ import { gameApi } from '@/services/gameApi';
 import { toast } from '@/components/ui/use-toast';
 import { botForgetCard } from '@/lib/botAI';
 
-export function createEffectActions(set: StoreSet, get: StoreGet) {
+export function createEffectActions(set: StoreSet<any>, get: StoreGet<any>) {
   return {
     resolveEffect: async (targetCardId: string) => {
-      const { effectType, effectStep, players, gameMode, gameId } = get();
+      const state = get() as any;
+      const { effectType, effectStep, players, gameMode, gameId } = state;
       if (!effectType) return;
 
       if (gameMode === 'online') {
           // PEEK OWN
           if (effectType === 'peek_own') {
               const player = players[0];
-              const cardIndex = player.cards.findIndex(c => c.id === targetCardId);
+              const cardIndex = player.cards.findIndex((c: any) => c.id === targetCardId);
               if (cardIndex !== -1) {
                   try {
                     await gameApi.playMove(gameId, { type: 'PEEK_OWN', cardIndex });
@@ -31,8 +32,8 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
               let targetPlayerId: string | undefined;
               let cardIndex = -1;
               
-              players.forEach(p => {
-                  const idx = p.cards.findIndex(c => c.id === targetCardId);
+              players.forEach((p: any) => {
+              	  const idx = p.cards.findIndex((c: any) => c.id === targetCardId);
                   if (idx !== -1) {
                       targetPlayerId = p.id;
                       cardIndex = idx;
@@ -57,21 +58,21 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
       }
 
       if (effectType === 'peek_own') {
-        const isOwnCard = players[0].cards.some((c) => c.id === targetCardId);
+        const isOwnCard = players[0].cards.some((c: any) => c.id === targetCardId);
         if (!isOwnCard) return;
         get().peekCard(targetCardId);
         return;
       }
 
       if (effectType === 'peek_opponent') {
-        const isOwnCard = players[0].cards.some((c) => c.id === targetCardId);
+        const isOwnCard = players[0].cards.some((c: any) => c.id === targetCardId);
         if (isOwnCard) return;
         get().peekCard(targetCardId);
         return;
       }
 
       if (effectType === 'blind_swap') {
-        const current = get().selectedCards;
+        const current = (get() as any).selectedCards as string[];
         if (current.includes(targetCardId)) {
           set({ selectedCards: current.filter((id) => id !== targetCardId) });
         } else if (current.length < 2) {
@@ -81,7 +82,7 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
       }
 
       if (effectType === 'semi_blind_swap') {
-        const { effectPreviewCardIds } = get();
+        const { effectPreviewCardIds } = get() as any;
         if (effectStep === 'select') {
           // Can peek at ANY card on the table (own or opponent)
           set({
@@ -94,7 +95,7 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
           const peekedId = effectPreviewCardIds[0];
           if (targetCardId === peekedId) return; // Can't swap with itself
           
-          const current = get().selectedCards;
+          const current = (get() as any).selectedCards as string[];
           if (current.includes(targetCardId)) {
             set({ selectedCards: [] });
           } else {
@@ -106,7 +107,7 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
 
       if (effectType === 'full_vision_swap') {
         if (effectStep === 'select') {
-          const current = get().selectedCards;
+          const current = (get() as any).selectedCards as string[];
           if (current.includes(targetCardId)) {
             set({ selectedCards: current.filter((id) => id !== targetCardId) });
           } else if (current.length < 2) {
@@ -129,7 +130,8 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
     },
 
     confirmEffect: async () => {
-      const { effectType, selectedCards, effectPreviewCardIds, players, memorizedCards, gameMode, gameId } = get();
+      const state = get() as any;
+      const { effectType, selectedCards, effectPreviewCardIds, players, memorizedCards, gameMode, gameId } = state;
 
       let card1Id: string | undefined;
       let card2Id: string | undefined;
@@ -155,8 +157,8 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
           let c1Info: { playerId: string; cardIndex: number } | null = null;
           let c2Info: { playerId: string; cardIndex: number } | null = null;
 
-          players.forEach(p => {
-              p.cards.forEach((c, i) => {
+          players.forEach((p: any) => {
+	              p.cards.forEach((c: any, i: number) => {
                   if (c.id === card1Id) c1Info = { playerId: p.id, cardIndex: i };
                   if (c.id === card2Id) c2Info = { playerId: p.id, cardIndex: i };
               });
@@ -203,7 +205,7 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
         const temp = updatedPlayers[c1Info.playerIdx].cards[c1Info.cardIdx];
         updatedPlayers[c1Info.playerIdx] = {
           ...updatedPlayers[c1Info.playerIdx],
-          cards: updatedPlayers[c1Info.playerIdx].cards.map((c, i) =>
+          cards: updatedPlayers[c1Info.playerIdx].cards.map((c: any, i: number) =>
             i === c1Info!.cardIdx
               ? { ...updatedPlayers[c2Info!.playerIdx].cards[c2Info!.cardIdx], faceUp: false }
               : c
@@ -211,18 +213,18 @@ export function createEffectActions(set: StoreSet, get: StoreGet) {
         };
         updatedPlayers[c2Info.playerIdx] = {
           ...updatedPlayers[c2Info.playerIdx],
-          cards: updatedPlayers[c2Info.playerIdx].cards.map((c, i) =>
+          cards: updatedPlayers[c2Info.playerIdx].cards.map((c: any, i: number) =>
             i === c2Info!.cardIdx ? { ...temp, faceUp: false } : c
           ),
         };
       }
 
       let updatedMemorized = memorizedCards;
-      const updatedMemories = { ...get().botMemories };
+      const updatedMemories = { ...(get() as any).botMemories };
 
       if (card1Id && card2Id) {
         if (effectType === 'blind_swap') {
-          updatedMemorized = memorizedCards.filter((id) => id !== card1Id && id !== card2Id);
+          updatedMemorized = memorizedCards.filter((id: string) => id !== card1Id && id !== card2Id);
         }
 
         if (gameMode === 'offline') {

@@ -94,6 +94,13 @@ export const GameActionSchema = z.discriminatedUnion('type', [
 ]);
 export type GameAction = z.infer<typeof GameActionSchema>;
 
+export interface FlyingCardEntry {
+  id: string;
+  card: Card;
+  fromAnchor: string;
+  toAnchor: string;
+}
+
 // ── Avatar Colors ──
 
 export const AVATAR_COLORS = [
@@ -119,8 +126,6 @@ export interface TurnLogEntry {
   playerColor: string;
   message: string;
 }
-
-// ── Tap State ──
 
 export interface TapState {
   phase: 'window' | 'selecting' | 'swapping';

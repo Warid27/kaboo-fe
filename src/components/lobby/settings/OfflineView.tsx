@@ -1,9 +1,13 @@
 import { motion } from 'framer-motion';
-import { useGameStore } from '@/store/gameStore';
+import { GameSettings } from '@/types/game';
 import { TIMER_OPTIONS, TARGET_SCORE_OPTIONS, PLAYER_COUNTS, DIFFICULTY_OPTIONS } from './constants';
 
-export function OfflineView() {
-  const { settings, updateSettings } = useGameStore();
+interface OfflineViewProps {
+  settings: GameSettings;
+  updateSettings: (partial: Partial<GameSettings>) => void;
+}
+
+export function OfflineView({ settings, updateSettings }: OfflineViewProps) {
 
   return (
     <motion.div

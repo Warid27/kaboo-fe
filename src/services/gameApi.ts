@@ -25,8 +25,7 @@ export interface GameActionPayload {
 }
 
 // Helper to extract error message from Supabase Functions response
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function parseSupabaseError(error: any): Promise<string> {
+async function parseSupabaseError(error: unknown): Promise<string> {
   // If it's already a clean Error with a custom message, return it
   if (error instanceof Error && error.message !== 'Edge Function returned a non-2xx status code') {
     return error.message;
@@ -34,8 +33,7 @@ async function parseSupabaseError(error: any): Promise<string> {
 
   // Check for context in Supabase error (FunctionsHttpError)
   if (error && typeof error === 'object' && 'context' in error) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = (error as any).context as Response;
+    const res = (error as { context: Response }).context;
     try {
       // Clone response to avoid consuming the body if it's needed elsewhere (unlikely here)
       const text = await res.clone().text();

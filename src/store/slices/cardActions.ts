@@ -8,10 +8,11 @@ import { captureSnapshot } from '../snapshotHelper';
 import { gameApi } from '@/services/gameApi';
 import { toast } from '@/components/ui/use-toast';
 
-export function createCardActions(set: StoreSet, get: StoreGet) {
+export function createCardActions(set: StoreSet<any>, get: StoreGet<any>) {
   return {
     peekCard: (cardId: string) => {
-      const { initialLooksRemaining, gamePhase, peekedCards, memorizedCards } = get();
+      const state = get() as any;
+      const { initialLooksRemaining, gamePhase, peekedCards, memorizedCards } = state;
 
       // Online Peek Logic (TODO: Integrate PEEK_OWN / PEEK_OPPONENT via API if strictly enforced by backend)
       // For now, if we assume PEEK is an effect result handled by backend state, we might just receive the card value.
@@ -32,9 +33,9 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
         });
 
         setTimeout(() => {
-          const current = get();
+          const current = get() as any;
           set({
-            peekedCards: current.peekedCards.filter((id) => id !== cardId),
+            peekedCards: current.peekedCards.filter((id: string) => id !== cardId),
             memorizedCards: [...current.memorizedCards, cardId],
           });
 
@@ -46,9 +47,9 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       } else if (gamePhase === 'playing' || gamePhase === 'kaboo_final') {
         set({ peekedCards: [...peekedCards, cardId] });
         setTimeout(() => {
-          const current = get();
+          const current = get() as any;
           set({
-            peekedCards: current.peekedCards.filter((id) => id !== cardId),
+            peekedCards: current.peekedCards.filter((id: string) => id !== cardId),
             showEffectOverlay: false,
             effectType: null,
             turnPhase: 'end_turn',
@@ -58,7 +59,8 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
     },
 
     drawCard: async () => {
-      const { drawPile, turnPhase, currentPlayerIndex, gameMode, gameId, isActionLocked } = get();
+      const state = get() as any;
+      const { drawPile, turnPhase, currentPlayerIndex, gameMode, gameId, isActionLocked } = state;
       if (isActionLocked || turnPhase !== 'draw' || drawPile.length === 0) return;
       get().lockAction();
 
@@ -87,7 +89,8 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
     },
 
     drawFromDiscard: async () => {
-      const { discardPile, turnPhase, currentPlayerIndex, gameMode, gameId, isActionLocked } = get();
+      const state = get() as any;
+      const { discardPile, turnPhase, currentPlayerIndex, gameMode, gameId, isActionLocked } = state;
       if (isActionLocked || turnPhase !== 'draw' || discardPile.length === 0) return;
       get().lockAction();
 
@@ -116,12 +119,13 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
     },
 
     swapCard: async (playerCardId: string) => {
-      const { heldCard, players, currentPlayerIndex, discardPile, botMemories, gameMode, gameId, turnNumber, isActionLocked } = get();
+      const state = get() as any;
+      const { heldCard, players, currentPlayerIndex, discardPile, botMemories, gameMode, gameId, turnNumber, isActionLocked } = state;
       if (isActionLocked || !heldCard) return;
       get().lockAction();
 
       const player = players[currentPlayerIndex];
-      const cardIndex = player.cards.findIndex((c) => c.id === playerCardId);
+      const cardIndex = player.cards.findIndex((c: any) => c.id === playerCardId);
       if (cardIndex === -1) {
         get().unlockAction();
         return;
@@ -145,7 +149,7 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
       const updatedCards = [...player.cards];
       updatedCards[cardIndex] = newCard;
 
-      const updatedPlayers = players.map((p, i) =>
+      const updatedPlayers = players.map((p: any, i: number) =>
         i === currentPlayerIndex ? { ...p, cards: updatedCards } : p
       );
 
@@ -244,13 +248,14 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
     },
 
     discardPair: (cardId1: string, cardId2: string) => {
-      const { players, currentPlayerIndex, discardPile, settings, turnPhase, heldCard } = get();
+      const state = get() as any;
+      const { players, currentPlayerIndex, discardPile, settings, turnPhase, heldCard } = state;
       if (!settings.mattsPairsRule) return;
       if (turnPhase !== 'action' || currentPlayerIndex !== 0 || !heldCard) return;
 
       const player = players[0];
-      const card1 = player.cards.find((c) => c.id === cardId1);
-      const card2 = player.cards.find((c) => c.id === cardId2);
+      const card1 = player.cards.find((c: any) => c.id === cardId1);
+      const card2 = player.cards.find((c: any) => c.id === cardId2);
       if (!card1 || !card2 || card1.rank !== card2.rank) return;
 
       const discardedCards = [
@@ -258,9 +263,9 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
         { ...card2, faceUp: true },
       ];
 
-      const updatedPlayers = players.map((p, i) =>
+      const updatedPlayers = players.map((p: any, i: number) =>
         i === 0
-          ? { ...p, cards: p.cards.filter((c) => c.id !== cardId1 && c.id !== cardId2) }
+          ? { ...p, cards: p.cards.filter((c: any) => c.id !== cardId1 && c.id !== cardId2) }
           : p
       );
 
@@ -271,7 +276,7 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
         players: updatedPlayers,
         discardPile: [...discardPile, ...discardedCards],
         selectedCards: [],
-        memorizedCards: get().memorizedCards.filter((id) => id !== cardId1 && id !== cardId2),
+        memorizedCards: get().memorizedCards.filter((id: string) => id !== cardId1 && id !== cardId2),
       });
       useReplayStore.getState().pushSnapshot('discardPair', captureSnapshot(get()));
     },
@@ -279,7 +284,7 @@ export function createCardActions(set: StoreSet, get: StoreGet) {
     selectCard: (cardId: string) =>
       set((state) => ({
         selectedCards: state.selectedCards.includes(cardId)
-          ? state.selectedCards.filter((id) => id !== cardId)
+          ? state.selectedCards.filter((id: string) => id !== cardId)
           : [...state.selectedCards, cardId],
       })),
 

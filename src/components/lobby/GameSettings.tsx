@@ -1,18 +1,23 @@
-import { useGameStore } from '@/store/gameStore';
+import { GameSettings as IGameSettings } from '@/types/game';
 import { HostView } from './settings/HostView';
 import { OfflineView } from './settings/OfflineView';
 import { PlayerView } from './settings/PlayerView';
 
-export function GameSettings({ isHost = true }: { isHost?: boolean }) {
-  const { gameMode } = useGameStore();
+interface GameSettingsProps {
+  settings: IGameSettings;
+  updateSettings: (partial: Partial<IGameSettings>) => void;
+  isHost: boolean;
+  isOffline: boolean;
+}
 
-  if (gameMode === 'offline') {
-    return <OfflineView />;
+export function GameSettings({ settings, updateSettings, isHost, isOffline }: GameSettingsProps) {
+  if (isOffline) {
+    return <OfflineView settings={settings} updateSettings={updateSettings} />;
   }
 
   if (isHost) {
-    return <HostView />;
+    return <HostView settings={settings} updateSettings={updateSettings} />;
   }
 
-  return <PlayerView />;
+  return <PlayerView settings={settings} />;
 }

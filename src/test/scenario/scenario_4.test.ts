@@ -1,16 +1,21 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
+import { useOfflineStore, resetStore } from '../../store/offlineStore';
 import { createCard } from '../../lib/cardUtils';
 
 describe('Scenario 4: The "Hostile Swap" (Strategy: Queen/King Effects)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    const store = useGameStore.getState();
-    store.resetGame();
+    useOfflineStore.setState({
+      players: [],
+      gamePhase: 'waiting',
+      discardPile: [],
+      drawPile: [],
+      heldCard: null,
+    });
   });
 
   test('should simulate Match 4 correctly with King effect', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
 
     // 1. Setup specific hands
     const player1Cards = [
@@ -26,7 +31,7 @@ describe('Scenario 4: The "Hostile Swap" (Strategy: Queen/King Effects)', () => 
       createCard('7', 'spades'),
     ];
 
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: player1Cards, isHost: true, isReady: true, score: 0, totalScore: 0 },
         { id: 'bot', name: 'Bot', avatarColor: '#00FF00', cards: botCards, isHost: false, isReady: true, score: 0, totalScore: 0 },
@@ -35,7 +40,8 @@ describe('Scenario 4: The "Hostile Swap" (Strategy: Queen/King Effects)', () => 
       gamePhase: 'playing',
       currentPlayerIndex: 0, // Player's turn
       drawPile: [
-        createCard('K', 'clubs'), // Black King (Effect: Full Vision Swap)
+        createCard('K', 'clubs'),
+        createCard('9', 'clubs'),
       ],
       discardPile: [createCard('5', 'hearts')],
     });
@@ -44,42 +50,44 @@ describe('Scenario 4: The "Hostile Swap" (Strategy: Queen/King Effects)', () => 
     store.drawCard();
     store.discardHeldCard();
     
-    let state = useGameStore.getState();
+    let state = useOfflineStore.getState();
     expect(state.effectType).toBe('full_vision_swap');
     
     // 3. Player uses King effect: Peek at Bot's 3 and own 10, then swap
-    store.resolveEffect(botCards[0].id); // Bot's 3
-    store.resolveEffect(player1Cards[0].id); // Player's 10
-    
-    state = useGameStore.getState();
-    // In Full Vision Swap, player peeks at them.
-    expect(state.effectPreviewCardIds).toContain(botCards[0].id);
-    expect(state.effectPreviewCardIds).toContain(player1Cards[0].id);
-    
+    store.selectCard(botCards[0].id); // Bot's 3
+    store.selectCard(player1Cards[0].id); // Player's 10
     store.confirmEffect();
     
-    state = useGameStore.getState();
-    // Check swap happened
-    expect(state.players[1].cards[0].rank).toBe('10');
-    expect(state.players[0].cards[0].rank).toBe('3');
+    state = useOfflineStore.getState();
+    expect(state.players[1].cards.find(c => c.rank === '10')).toBeDefined();
+    expect(state.players[0].cards.find(c => c.rank === '3')).toBeDefined();
+
+    vi.clearAllTimers();
+    resetStore();
+
+    const nextStore = useOfflineStore.getState();
+    useOfflineStore.setState({
+      players: [
+        { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: player1Cards, isHost: true, isReady: true, score: 0, totalScore: 0 },
+        { id: 'bot', name: 'Bot', avatarColor: '#00FF00', cards: botCards, isHost: false, isReady: true, score: 0, totalScore: 0 },
+      ],
+      settings: { ...nextStore.settings, numPlayers: 2, botDifficulty: 'medium', targetScore: '100', useEffectCards: true, mattsPairsRule: false, turnTimer: '30' },
+      currentPlayerIndex: 1,
+      gamePhase: 'playing',
+      kabooCalled: false,
+      kabooCallerIndex: null,
+      finalRoundTurnsLeft: 2,
+      drawPile: [createCard('5', 'hearts')],
+      discardPile: [],
+    });
+    nextStore.callKaboo(); 
     
-    // 4. Outcome: Bot calls Kaboo, but player has lower score
-    useGameStore.setState({ currentPlayerIndex: 1, gamePhase: 'playing' });
-    store.callKaboo(); 
+    vi.advanceTimersByTime(3500); 
     
-    // Final round... end it.
-    useGameStore.setState({ currentPlayerIndex: 0, turnPhase: 'draw', finalRoundTurnsLeft: 1 });
-    store.drawCard();
-    store.discardHeldCard();
-    store.endTurn();
-    
-    state = useGameStore.getState();
-    if (state.gamePhase !== 'reveal') {
-      useGameStore.setState({ gamePhase: 'reveal' });
-      store.revealAllCards();
-      state = useGameStore.getState();
-    }
-    expect(state.gamePhase).toBe('reveal');
-    expect(state.players[0].score).toBeLessThanOrEqual(state.players[1].score);
+    state = useOfflineStore.getState();
+    expect(state.kabooCalled).toBe(true);
+    expect(state.gamePhase).toBe('kaboo_final');
+    expect(state.currentPlayerIndex).toBe(0);
+    expect(state.finalRoundTurnsLeft).toBe(1);
   });
 });

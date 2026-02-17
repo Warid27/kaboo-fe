@@ -1,6 +1,5 @@
-import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 import { gameApi } from '../../services/gameApi';
 
 vi.mock('../../services/gameApi', () => ({
@@ -18,11 +17,10 @@ describe('Scenario 29: Offline Mode While Online (Connectivity Toggle)', () => {
   });
 
   test('Offline game should remain offline even if connectivity is restored', async () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
 
     // 1. Setup: Offline game in progress
-    useGameStore.setState({
-      gameMode: 'offline',
+    useOfflineStore.setState({
       gamePhase: 'playing',
       currentPlayerIndex: 0,
       turnPhase: 'draw',
@@ -45,16 +43,13 @@ describe('Scenario 29: Offline Mode While Online (Connectivity Toggle)', () => {
     // In a real scenario, this might trigger a browser event, but our store should ignore it for active games.
     
     // 3. Perform an action
-    await store.drawCard();
+    store.drawCard();
 
-    // Assert: gameMode is still offline
-    expect(useGameStore.getState().gameMode).toBe('offline');
-    
     // Assert: No network calls made to gameApi
     expect(gameApi.playMove).not.toHaveBeenCalled();
     
     // Assert: State updated locally
-    expect(useGameStore.getState().heldCard?.id).toBe('d1');
-    expect(useGameStore.getState().turnPhase).toBe('action');
+    expect(useOfflineStore.getState().heldCard?.id).toBe('d1');
+    expect(useOfflineStore.getState().turnPhase).toBe('action');
   });
 });

@@ -1,8 +1,29 @@
 import { useEffect } from 'react';
-import { useGameStore } from '@/store/gameStore';
+import { useOnlineStore } from '@/store/onlineStore';
+import { useOfflineStore } from '@/store/offlineStore';
 import { useSettingsStore, type KeyAction } from '@/store/settingsStore';
 
-export function useKeyboardShortcuts() {
+type OnlineMovePayload = { type: string; [key: string]: unknown };
+
+type KeyboardActions = {
+  drawCard?: () => void;
+  discardHeldCard?: () => void;
+  swapCard?: (cardId: string) => void;
+  callKaboo?: () => void;
+  endTurn?: () => void;
+  readyToPlay?: () => void;
+  confirmTapDiscard?: () => void;
+  confirmEffect?: () => void;
+  finalizeTap?: () => void;
+  skipTapSwap?: () => void;
+  declineEffect?: () => void;
+  tapSelectCard?: (cardId: string) => void;
+  tapSwapCard?: (cardId: string) => void;
+  peekCard?: (cardId: string) => void;
+  resolveEffect?: (cardId: string) => void;
+};
+
+export function useKeyboardShortcuts(mode: 'online' | 'offline' = 'online') {
   const keyBindings = useSettingsStore((s) => s.keyBindings);
 
   useEffect(() => {
@@ -14,12 +35,30 @@ export function useKeyboardShortcuts() {
       // Skip if a dialog/modal is open
       if (document.querySelector('[role="dialog"]')) return;
 
-      const state = useGameStore.getState();
+      const state = mode === 'online' ? useOnlineStore.getState() : useOfflineStore.getState();
       const {
-        gamePhase, turnPhase, currentPlayerIndex, heldCard,
-        selectedCards, tapState, isPaused, players, kabooCalled,
+        gamePhase,
+        turnPhase,
+        currentPlayerIndex,
+        heldCard,
+        players,
+        kabooCalled,
       } = state;
 
+      const tapState = 'tapState' in state
+        ? (state as { tapState: { phase: string; selectedCardIds: string[] } | null }).tapState
+        : null;
+
+      const selectedCards = 'selectedCards' in state
+        ? (state as { selectedCards: string[] }).selectedCards
+        : [];
+
+      const actions = state as KeyboardActions;
+
+      const isPaused =
+        'isPaused' in state && typeof (state as { isPaused?: boolean }).isPaused === 'boolean'
+          ? (state as { isPaused: boolean }).isPaused
+          : false;
       if (isPaused) return;
       if (gamePhase === 'waiting' || gamePhase === 'dealing' || gamePhase === 'reveal') return;
 
@@ -31,62 +70,97 @@ export function useKeyboardShortcuts() {
       if (!actionEntry) return;
       const action = actionEntry[0] as KeyAction;
 
+      // Helper for online moves
+      const playOnlineMove = (payload: OnlineMovePayload) => {
+        if (mode !== 'online') return false;
+        if (!('playMove' in state)) return false;
+
+        const playMove = (state as { playMove?: (p: OnlineMovePayload) => void }).playMove;
+        if (!playMove || typeof playMove !== 'function') return false;
+
+        playMove(payload);
+        return true;
+      };
+
       switch (action) {
         case 'draw':
           if (isPlayerTurn && turnPhase === 'draw' && gamePhase === 'playing') {
             e.preventDefault();
-            state.drawCard();
+            if (!playOnlineMove({ type: 'DRAW_FROM_DECK' })) {
+              actions.drawCard?.();
+            }
           }
           break;
 
         case 'discard':
           if (isPlayerTurn && turnPhase === 'action' && heldCard) {
             e.preventDefault();
-            state.discardHeldCard();
+            if (!playOnlineMove({ type: 'DISCARD_DRAWN' })) {
+              actions.discardHeldCard?.();
+            }
           }
           break;
 
         case 'swap':
           if (isPlayerTurn && turnPhase === 'action' && heldCard && selectedCards.length > 0) {
             e.preventDefault();
-            state.swapCard(selectedCards[0]);
+            if (mode === 'online') {
+              const cardIdx = players[0]?.cards.findIndex(c => c.id === selectedCards[0]);
+              playOnlineMove({ type: 'SWAP_WITH_OWN', ownCardIndex: cardIdx });
+            } else {
+              actions.swapCard?.(selectedCards[0]);
+            }
           }
           break;
 
         case 'kaboo':
           if (isPlayerTurn && turnPhase === 'draw' && gamePhase === 'playing' && !kabooCalled) {
             e.preventDefault();
-            state.callKaboo();
+            if (!playOnlineMove({ type: 'CALL_KABOO' })) {
+              actions.callKaboo?.();
+            }
           }
           break;
 
         case 'endTurn':
           if (isPlayerTurn && turnPhase === 'end_turn') {
             e.preventDefault();
-            state.endTurn();
+            actions.endTurn?.();
+          } else if (gamePhase === 'initial_look') {
+            e.preventDefault();
+            if (mode === 'online') {
+              playOnlineMove({ type: 'READY_TO_PLAY' });
+            } else if ('readyToPlay' in state) {
+              actions.readyToPlay?.();
+            }
           }
           break;
 
         case 'confirm':
           if (tapState?.phase === 'selecting' && tapState.selectedCardIds.length > 0) {
             e.preventDefault();
-            state.confirmTapDiscard();
+            if (mode === 'online') {
+              // Online SNAP/Tap logic might be different, for now just use SNAP if applicable
+              playOnlineMove({ type: 'SNAP', cardIndex: players[0]?.cards.findIndex(c => c.id === tapState.selectedCardIds[0]) });
+            } else {
+              actions.confirmTapDiscard?.();
+            }
           } else if (isPlayerTurn && turnPhase === 'effect') {
             e.preventDefault();
-            state.confirmEffect();
+            actions.confirmEffect?.();
           }
           break;
 
         case 'skip':
           if (tapState?.phase === 'selecting') {
             e.preventDefault();
-            state.finalizeTap();
+            actions.finalizeTap?.();
           } else if (tapState?.phase === 'swapping') {
             e.preventDefault();
-            state.skipTapSwap();
+            actions.skipTapSwap?.();
           } else if (isPlayerTurn && turnPhase === 'effect') {
             e.preventDefault();
-            state.declineEffect();
+            actions.declineEffect?.();
           }
           break;
 
@@ -100,19 +174,42 @@ export function useKeyboardShortcuts() {
 
           if (tapState?.phase === 'selecting') {
             e.preventDefault();
-            state.tapSelectCard(card.id);
+            if (mode === 'online') {
+              playOnlineMove({ type: 'SNAP', cardIndex: idx });
+            } else {
+              actions.tapSelectCard?.(card.id);
+            }
           } else if (tapState?.phase === 'swapping') {
             e.preventDefault();
-            state.tapSwapCard(card.id);
+            actions.tapSwapCard?.(card.id);
           } else if (gamePhase === 'initial_look') {
             e.preventDefault();
-            state.peekCard(card.id);
+            if (mode === 'online') {
+              playOnlineMove({ type: 'PEEK_OWN', cardIndex: idx });
+            } else {
+              actions.peekCard?.(card.id);
+            }
           } else if (isPlayerTurn && turnPhase === 'action') {
             e.preventDefault();
-            state.selectCard(card.id);
+            if (mode === 'offline') {
+              actions.swapCard?.(card.id);
+            } else {
+              // In online mode, selecting a card usually means preparing for a swap or action
+              // For now, we'll just use the same logic as OnlineGameBoard
+              playOnlineMove({ type: 'SWAP_WITH_OWN', ownCardIndex: idx });
+            }
           } else if (isPlayerTurn && turnPhase === 'effect') {
             e.preventDefault();
-            state.resolveEffect(card.id);
+            if (mode === 'online') {
+              const effectType = 'effectType' in state
+                ? (state as { effectType?: string }).effectType
+                : undefined;
+              if (effectType === 'peek_own') {
+                playOnlineMove({ type: 'PEEK_OWN', cardIndex: idx });
+              }
+            } else {
+              actions.resolveEffect?.(card.id);
+            }
           }
           break;
         }
@@ -120,7 +217,10 @@ export function useKeyboardShortcuts() {
         case 'tap':
           if (tapState?.phase === 'window') {
             e.preventDefault();
-            state.activateTap();
+            if ('activateTap' in state) {
+              const activateTap = (state as { activateTap?: () => void }).activateTap;
+              activateTap?.();
+            }
           }
           break;
       }
@@ -128,5 +228,5 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [keyBindings]);
+  }, [keyBindings, mode]);
 }

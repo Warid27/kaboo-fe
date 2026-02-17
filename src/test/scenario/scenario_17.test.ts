@@ -1,7 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-
-import { resetStore } from '../testHelpers';
+import { useOfflineStore, resetStore } from '../../store/offlineStore';
 
 describe('Scenario 17: Rapid Fire Taps (Hand size 0)', () => {
   beforeEach(() => {
@@ -10,11 +8,11 @@ describe('Scenario 17: Rapid Fire Taps (Hand size 0)', () => {
   });
 
   test('should allow a player to reach 0 cards via Taps and trigger auto-Kaboo', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // 1. Setup: Player 1 has 4 cards, all Rank '5'
     // Bot has Rank '7's
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         {
           id: 'p1',
@@ -65,14 +63,13 @@ describe('Scenario 17: Rapid Fire Taps (Hand size 0)', () => {
     store.tapSelectCard('p1-c1');
     store.confirmTapDiscard();
     
-    expect(useGameStore.getState().players[0].cards.length).toBe(3);
+    expect(useOfflineStore.getState().players[0].cards.length).toBe(3);
 
     // 3. Repeat for remaining 3 cards
-    // We need to simulate a new discard of rank '5' each time or just force it for the test
     const ranks = ['5', '5', '5'];
     ranks.forEach((rank, i) => {
-      useGameStore.setState({
-        discardPile: [...useGameStore.getState().discardPile, { id: `extra-${i}`, rank: '5' as const, suit: 'hearts' as const, faceUp: true }]
+      useOfflineStore.setState({
+        discardPile: [...useOfflineStore.getState().discardPile, { id: `extra-${i}`, rank: '5' as const, suit: 'hearts' as const, faceUp: true }]
       });
       store.openTapWindow(1);
       store.activateTap();
@@ -80,12 +77,10 @@ describe('Scenario 17: Rapid Fire Taps (Hand size 0)', () => {
       store.confirmTapDiscard();
     });
 
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     expect(state.players[0].cards.length).toBe(0);
     
     // 4. Verify auto-Kaboo triggered
-    // In our implementation, we need to make sure this happens.
-    // If it doesn't pass, we'll fix the code.
     expect(state.kabooCalled).toBe(true);
     expect(state.kabooCallerIndex).toBe(0);
   });

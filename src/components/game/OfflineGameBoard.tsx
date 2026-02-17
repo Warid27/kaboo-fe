@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useGameStore } from '@/store/gameStore';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { GameBoardLayout } from './GameBoardLayout';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useGameInstruction } from './useGameInstruction';
+import { useOfflineGame } from '@/hooks/useOfflineGame';
+import { getInstruction } from './useGameInstruction';
 
-export function GameBoard() {
+export function OfflineGameBoard() {
+  const store = useOfflineGame();
   const {
     players,
     currentPlayerIndex,
@@ -16,67 +17,54 @@ export function GameBoard() {
     discardPile,
     heldCard,
     peekedCards,
-    memorizedCards,
     selectedCards,
-    effectType,
-    effectStep,
-    effectPreviewCardIds,
-    effectTimeRemaining,
     settings,
-    turnTimeRemaining,
     kabooCalled,
     kabooCallerIndex,
     showKabooAnnouncement,
     finalRoundTurnsLeft,
     tapState,
-    showEffectOverlay,
     roundNumber,
     turnLog,
-    flyingCards,
+    effectType,
+    effectStep,
+    effectPreviewCardIds,
+    isPaused,
+    setIsPaused,
     drawCard,
     drawFromDiscard,
-    peekCard,
-    selectCard,
-    resolveEffect,
-    tapSelectCard,
-    tapSwapCard,
-    isPaused,
-    callKaboo,
     swapCard,
     discardHeldCard,
-    discardPair,
+    callKaboo,
     endTurn,
-    checkGameState,
-    backToLobby,
-    endGame,
-  } = useGameStore();
+    resetStore,
+    peekCard,
+    resolveEffect,
+    readyToPlay,
+    activateTap,
+    confirmTapDiscard,
+    skipTapSwap,
+    finalizeTap,
+    declineEffect,
+    confirmEffect,
+  } = store;
 
-  const instruction = useGameInstruction();
-  useKeyboardShortcuts();
+  const instruction = useMemo(() => getInstruction(store), [store]);
 
-  // Polling for game state updates (especially for being kicked)
-  useEffect(() => {
-    const { gameMode } = useGameStore.getState();
-    if (gameMode === 'offline') return;
-    
-    // Initial check
-    checkGameState();
+  useKeyboardShortcuts('offline');
 
-    const interval = setInterval(() => {
-        checkGameState();
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [checkGameState]);
-
-  // Turn timer countdown (pauses during effects)
+  // Turn timer countdown
+  const [turnTimeRemaining, setTurnTimeRemaining] = useState(30);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
+
+  useEffect(() => {
+    setTurnTimeRemaining(parseInt(settings.turnTimer) || 30);
+  }, [currentPlayerIndex, turnPhase]);
+
   useEffect(() => {
     if (currentPlayerIndex === 0 && gamePhase === 'playing' && turnPhase !== 'effect' && !tapState && !isPaused) {
       timerRef.current = setInterval(() => {
-        useGameStore.setState((state) => ({
-          turnTimeRemaining: Math.max(0, state.turnTimeRemaining - 1),
-        }));
+        setTurnTimeRemaining(prev => Math.max(0, prev - 1));
       }, 1000);
     }
     return () => {
@@ -84,49 +72,19 @@ export function GameBoard() {
     };
   }, [currentPlayerIndex, gamePhase, turnPhase, tapState, isPaused]);
 
-  // Effect timer countdown — auto-declines when it reaches 0
-  const effectTimerRef = useRef<ReturnType<typeof setInterval>>();
-  useEffect(() => {
-    if (currentPlayerIndex === 0 && turnPhase === 'effect' && !isPaused) {
-      effectTimerRef.current = setInterval(() => {
-        const remaining = useGameStore.getState().effectTimeRemaining;
-        if (remaining <= 0) {
-          useGameStore.getState().declineEffect();
-        } else {
-          useGameStore.setState({ effectTimeRemaining: remaining - 1 });
-        }
-      }, 1000);
-    }
-    return () => {
-      if (effectTimerRef.current) clearInterval(effectTimerRef.current);
-    };
-  }, [currentPlayerIndex, turnPhase, isPaused]);
-
-  // Handle card clicks based on current phase
   const handlePlayerCardClick = (cardId: string) => {
-    if (tapState?.phase === 'selecting') {
-      tapSelectCard(cardId);
-      return;
-    }
-    if (tapState?.phase === 'swapping') {
-      tapSwapCard(cardId);
-      return;
-    }
     if (gamePhase === 'initial_look') {
       peekCard(cardId);
     } else if (turnPhase === 'action' && currentPlayerIndex === 0) {
-      selectCard(cardId);
-    } else if (turnPhase === 'effect' && currentPlayerIndex === 0) {
+      swapCard(cardId);
+    } else if (turnPhase === 'effect' && currentPlayerIndex === 0 && effectType === 'peek_own') {
       resolveEffect(cardId);
     }
   };
 
   const handleOpponentCardClick = (cardId: string) => {
-    if (tapState?.phase === 'selecting') {
-      tapSelectCard(cardId);
-      return;
-    }
-    if (turnPhase === 'effect' && currentPlayerIndex === 0) {
+    if (turnPhase === 'effect' && currentPlayerIndex === 0 && 
+       (effectType === 'peek_opponent' || effectType === 'blind_swap' || effectType === 'semi_blind_swap' || effectType === 'full_vision_swap')) {
       resolveEffect(cardId);
     }
   };
@@ -145,13 +103,15 @@ export function GameBoard() {
 
   const handleLeaveGame = () => {
     if (confirm('Are you sure you want to leave?')) {
-      backToLobby();
+      resetStore();
     }
   };
 
-  const handleEndGame = () => {
-    if (confirm('Are you sure you want to end the game for everyone?')) {
-      endGame();
+  const handleEndTurn = () => {
+    if (gamePhase === 'initial_look') {
+      readyToPlay();
+    } else {
+      endTurn();
     }
   };
 
@@ -165,12 +125,12 @@ export function GameBoard() {
       discardPile={discardPile}
       heldCard={heldCard}
       peekedCards={peekedCards}
-      memorizedCards={memorizedCards}
+      memorizedCards={[]}
       selectedCards={selectedCards}
       effectType={effectType}
       effectStep={effectStep}
       effectPreviewCardIds={effectPreviewCardIds}
-      effectTimeRemaining={effectTimeRemaining}
+      effectTimeRemaining={0}
       settings={settings}
       turnTimeRemaining={turnTimeRemaining}
       kabooCalled={kabooCalled}
@@ -178,11 +138,15 @@ export function GameBoard() {
       showKabooAnnouncement={showKabooAnnouncement}
       finalRoundTurnsLeft={finalRoundTurnsLeft}
       tapState={tapState}
-      showEffectOverlay={showEffectOverlay}
+      showEffectOverlay={!!effectType}
       instruction={instruction}
       roundNumber={roundNumber}
       turnLog={turnLog}
-      flyingCards={flyingCards}
+      isPaused={isPaused}
+      setIsPaused={setIsPaused}
+      isHost={true}
+      isOffline={true}
+      canUndo={false} // TODO: Add undo support for offline
       onPlayerCardClick={handlePlayerCardClick}
       onOpponentCardClick={handleOpponentCardClick}
       onDrawClick={handleDrawClick}
@@ -190,10 +154,16 @@ export function GameBoard() {
       onCallKaboo={callKaboo}
       onSwapCard={swapCard}
       onDiscardHeldCard={discardHeldCard}
-      onDiscardPair={discardPair}
-      onEndTurn={endTurn}
+      onDiscardPair={() => {}}
+      onEndTurn={handleEndTurn}
       onLeaveGame={handleLeaveGame}
-      onEndGame={handleEndGame}
+      onEndGame={() => {}}
+      onActivateTap={activateTap}
+      onConfirmTapDiscard={confirmTapDiscard}
+      onSkipTapSwap={skipTapSwap}
+      onFinalizeTap={finalizeTap}
+      onDeclineEffect={declineEffect}
+      onConfirmEffect={confirmEffect}
     />
   );
 }

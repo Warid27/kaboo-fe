@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 19: All Black Royals (Worst Possible Hand)', () => {
   beforeEach(() => {
@@ -9,11 +9,11 @@ describe('Scenario 19: All Black Royals (Worst Possible Hand)', () => {
   });
 
   test('should calculate correct high points for black royals', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // Setup: Player 1 has Black King (13), Black King (13), Black Queen (12), Black Jack (11)
     // Total = 13 + 13 + 12 + 11 = 49
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         {
           id: 'p1',
@@ -51,7 +51,7 @@ describe('Scenario 19: All Black Royals (Worst Possible Hand)', () => {
 
     store.revealAllCards();
 
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     // Player 1 score should be 49
     expect(state.players[0].score).toBe(49);
   });

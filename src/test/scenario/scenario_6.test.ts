@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '@/store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore, resetStore } from '@/store/offlineStore';
 import { Rank, Suit, Card } from '@/types/game';
 
 function createMockCard(rank: Rank, suit: Suit, id: string): Card {
@@ -14,14 +13,14 @@ describe('Scenario 6: Empty Deck (Auto-Kaboo)', () => {
   });
 
   it('should trigger Auto-Kaboo when the deck is exhausted at end of turn', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // Setup: 2 players, 1 card in drawPile
     store.updateSettings({ numPlayers: 2 });
-    store.startOffline();
+    store.startOfflineGame();
     
     const lastCard = createMockCard('5', 'hearts', 'last-card');
-    useGameStore.setState({
+    useOfflineStore.setState({
       gamePhase: 'playing',
       turnPhase: 'draw',
       drawPile: [lastCard],
@@ -34,18 +33,18 @@ describe('Scenario 6: Empty Deck (Auto-Kaboo)', () => {
 
     // 1. Player draws the final card
     store.drawCard();
-    expect(useGameStore.getState().heldCard?.id).toBe('last-card');
-    expect(useGameStore.getState().drawPile.length).toBe(0);
+    expect(useOfflineStore.getState().heldCard?.id).toBe('last-card');
+    expect(useOfflineStore.getState().drawPile.length).toBe(0);
 
     // 2. Player discards it
     store.discardHeldCard();
-    expect(useGameStore.getState().discardPile[useGameStore.getState().discardPile.length - 1].id).toBe('last-card');
+    expect(useOfflineStore.getState().discardPile[useOfflineStore.getState().discardPile.length - 1].id).toBe('last-card');
 
     // 3. End turn - system should detect empty drawPile
     store.endTurn();
 
-    expect(useGameStore.getState().gamePhase).toBe('reveal');
-    expect(useGameStore.getState().kabooCalled).toBe(true);
-    expect(useGameStore.getState().kabooCallerIndex).toBe(-1); // SYSTEM / Auto-Kaboo
+    expect(useOfflineStore.getState().gamePhase).toBe('reveal');
+    expect(useOfflineStore.getState().kabooCalled).toBe(true);
+    expect(useOfflineStore.getState().kabooCallerIndex).toBe(-1); // SYSTEM / Auto-Kaboo
   });
 });

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '@/store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore, resetStore } from '@/store/offlineStore';
 import { Rank, Suit, Card } from '@/types/game';
 
 function createMockCard(rank: Rank, suit: Suit, id: string): Card {
@@ -14,12 +13,12 @@ describe('Scenario 11: The -2 Score (Negative Boundary)', () => {
   });
 
   it('should calculate -2 score for a hand with 2 Jokers', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     const joker1 = createMockCard('joker', 'joker', 'j1');
     const joker2 = createMockCard('joker', 'joker', 'j2');
     
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { 
           id: 'p1', 
@@ -37,7 +36,7 @@ describe('Scenario 11: The -2 Score (Negative Boundary)', () => {
     // We trigger the reveal/scoring logic
     store.revealAllCards();
 
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     expect(state.players[0].score).toBe(-2);
   });
 });

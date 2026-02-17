@@ -1,22 +1,21 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
+import { useOfflineStore, resetStore } from '../../store/offlineStore';
 import { createCard } from '../../lib/cardUtils';
 
 describe('Scenario 14: King Effect on Last Two Cards', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    const store = useGameStore.getState();
-    store.resetGame();
+    resetStore();
   });
 
   test('should handle King effect when only two cards remain on table', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
 
     // 1. Setup: Each player has 1 card
     const player1Cards = [createCard('10', 'hearts')];
     const botCards = [createCard('2', 'diamonds')];
 
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: player1Cards, isHost: true, isReady: true, score: 0, totalScore: 0 },
         { id: 'bot', name: 'Bot', avatarColor: '#00FF00', cards: botCards, isHost: false, isReady: true, score: 0, totalScore: 0 },
@@ -32,20 +31,15 @@ describe('Scenario 14: King Effect on Last Two Cards', () => {
     store.drawCard();
     store.discardHeldCard();
     
-    let state = useGameStore.getState();
+    let state = useOfflineStore.getState();
     expect(state.effectType).toBe('full_vision_swap');
     
     // 3. Player uses King effect: Peek and Swap the only two cards
-    store.resolveEffect(player1Cards[0].id);
-    store.resolveEffect(botCards[0].id);
-    
-    state = useGameStore.getState();
-    expect(state.effectPreviewCardIds).toContain(player1Cards[0].id);
-    expect(state.effectPreviewCardIds).toContain(botCards[0].id);
-    
+    store.selectCard(player1Cards[0].id);
+    store.selectCard(botCards[0].id);
     store.confirmEffect();
     
-    state = useGameStore.getState();
+    state = useOfflineStore.getState();
     expect(state.players[0].cards[0].rank).toBe('2');
     expect(state.players[1].cards[0].rank).toBe('10');
   });

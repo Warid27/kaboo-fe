@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { resetStore } from '../testHelpers';
+import { resetStore } from '../../store/offlineStore';
 import { applyMemoryFilter, createBotMemory, botRememberCard } from '../../lib/botAI';
 
 describe('Scenario 35: Bot Memory Decay (Easy Mode Over Time)', () => {

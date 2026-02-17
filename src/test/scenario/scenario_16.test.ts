@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '@/store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore, resetStore } from '@/store/offlineStore';
 import { Rank, Suit, Card } from '@/types/game';
 
 function createMockCard(rank: Rank, suit: Suit, id: string): Card {
@@ -14,12 +13,12 @@ describe('Scenario 16: Jack/Queen/King All-to-All Swaps', () => {
   });
 
   it('should allow Opponent-to-Opponent swaps with Jack effect', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     const bot1Card = createMockCard('3', 'hearts', 'b1-c1');
     const bot2Card = createMockCard('9', 'spades', 'b2-c1');
     
-    useGameStore.setState({
+    useOfflineStore.setState({
       gamePhase: 'playing',
       turnPhase: 'effect',
       effectType: 'blind_swap',
@@ -33,16 +32,16 @@ describe('Scenario 16: Jack/Queen/King All-to-All Swaps', () => {
     });
 
     // Select two opponent cards
-    store.resolveEffect('b1-c1');
-    store.resolveEffect('b2-c1');
+    store.selectCard('b1-c1');
+    store.selectCard('b2-c1');
     
-    expect(useGameStore.getState().selectedCards).toContain('b1-c1');
-    expect(useGameStore.getState().selectedCards).toContain('b2-c1');
+    expect(useOfflineStore.getState().selectedCards).toContain('b1-c1');
+    expect(useOfflineStore.getState().selectedCards).toContain('b2-c1');
 
     // Confirm swap
     store.confirmEffect();
 
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     expect(state.players[1].cards[0].id).toBe('b2-c1');
     expect(state.players[2].cards[0].id).toBe('b1-c1');
   });

@@ -37,6 +37,7 @@ export default function GameDevPage() {
   const [showKabooAnnouncement, setShowKabooAnnouncement] = useState(false);
   const [showTapWindow, setShowTapWindow] = useState(false);
   const [showTurnLog, setShowTurnLog] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [discardCount, setDiscardCount] = useState(1);
   const TOTAL_DECK_SIZE = 52; // Assuming a standard deck size for simulation
@@ -370,6 +371,10 @@ export default function GameDevPage() {
          instruction={{ id: 'debug-instruction', content: "Debug Mode: Layout Preview" }}
          roundNumber={1}
          turnLog={showTurnLog ? MOCK_LOG : []}
+        isPaused={isPaused}
+        setIsPaused={setIsPaused}
+        isHost={true}
+        isOffline={true}
          onPlayerCardClick={handleCardClick}
         onOpponentCardClick={() => {}}
         onDrawClick={handleDraw}
@@ -377,6 +382,7 @@ export default function GameDevPage() {
         onSwapCard={handleSwap}
         onDiscardHeldCard={handleDiscardHeld}
         onDiscardPair={() => {}}
+        onLeaveGame={() => {}}
       />
     </div>
   );

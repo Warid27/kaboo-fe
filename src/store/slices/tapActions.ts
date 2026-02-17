@@ -6,10 +6,10 @@ import { gameApi } from '@/services/gameApi';
 import { toast } from '@/components/ui/use-toast';
 import { botShouldTap, getBotTapDelay } from '@/lib/botAI';
 
-export function createTapActions(set: StoreSet, get: StoreGet) {
+export function createTapActions(set: StoreSet<any>, get: StoreGet<any>) {
   return {
     openTapWindow: (discarderIndex: number) => {
-      const { turnPhase, players, discardPile, botMemories, turnNumber, settings, gameMode } = get();
+      const { turnPhase, players, discardPile, botMemories, turnNumber, settings, gameMode } = get() as any;
       if (turnPhase === 'effect') return; // Don't interrupt effects
 
       set({
@@ -27,7 +27,7 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
       if (gameMode === 'offline') {
         const topDiscard = discardPile[discardPile.length - 1];
         if (topDiscard) {
-          players.forEach((p, i) => {
+          players.forEach((p: any, i: number) => {
             if (i > 0) { // Bot
               const memory = botMemories[p.id];
               if (memory) {
@@ -37,7 +37,7 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
                   // Use reaction time based on difficulty
                   const delay = getBotTapDelay(settings.botDifficulty);
                   setTimeout(() => {
-                    const currentState = get();
+                    const currentState = get() as any;
                     if (currentState.tapState?.phase === 'window') {
                       // Actually perform the tap
                       set(s => ({
@@ -66,28 +66,25 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
     },
 
     activateTap: () => {
-      const { tapState } = get();
+      const { tapState } = get() as any;
       if (!tapState || tapState.phase !== 'window') return;
       set({ tapState: { ...tapState, phase: 'selecting' } });
     },
 
     tapSelectCard: (cardId: string) => {
-      const { tapState, players } = get();
+      const { tapState, players } = get() as any;
       if (!tapState || tapState.phase !== 'selecting') return;
 
       // Prevent tapping if you were the discarder
       let cardOwnerIndex = -1;
-      players.forEach((p, i) => {
-        if (p.cards.some(c => c.id === cardId)) {
+      players.forEach((p: any, i: number) => {
+        if (p.cards.some((c: any) => c.id === cardId)) {
           cardOwnerIndex = i;
         }
       });
 
       // Prevent tapping if you were the discarder and trying to tap your own card
       // In standard Kaboo, the discarder CANNOT snap their own cards in the window they created.
-      const { myPlayerId } = get();
-      const isMe = players[0].id === myPlayerId; // Simplification for offline
-
       if (cardOwnerIndex !== -1 && cardOwnerIndex === tapState.discarderIndex && cardOwnerIndex === 0) {
         toast({
           title: 'Invalid Action',
@@ -102,14 +99,14 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
         tapState: {
           ...tapState,
           selectedCardIds: current.includes(cardId)
-            ? current.filter((id) => id !== cardId)
+            ? current.filter((id: string) => id !== cardId)
             : [...current, cardId],
         },
       });
     },
 
     confirmTapDiscard: async () => {
-      const { tapState, players, discardPile, drawPile, gameMode, gameId } = get();
+      const { tapState, players, discardPile, drawPile, gameMode, gameId } = get() as any;
       if (!tapState || tapState.phase !== 'selecting' || tapState.selectedCardIds.length === 0) return;
 
       if (gameMode === 'online') {
@@ -121,8 +118,8 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
               let targetPlayerId: string | undefined;
               let cardIndex = -1;
               
-              players.forEach(p => {
-                  const idx = p.cards.findIndex(c => c.id === cardId);
+              players.forEach((p: any) => {
+                  const idx = p.cards.findIndex((c: any) => c.id === cardId);
                   if (idx !== -1) {
                       targetPlayerId = p.id;
                       cardIndex = idx;
@@ -153,7 +150,7 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
                   // This is a discrepancy or a simplified rule in backend.
                   // However, let's implement what we can: Snapping OWN cards.
                   
-                  const { myPlayerId } = get();
+                  const { myPlayerId } = get() as any;
                   if (targetPlayerId === myPlayerId) {
                       try {
                           await gameApi.playMove(gameId, { type: 'SNAP', cardIndex });
@@ -180,7 +177,7 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
 
       for (const cardId of tapState.selectedCardIds) {
         for (let pi = 0; pi < players.length; pi++) {
-          const card = players[pi].cards.find((c) => c.id === cardId);
+          const card = players[pi].cards.find((c: any) => c.id === cardId);
           if (card) {
             if (card.rank === targetRank) {
               matchingCardIds.push(cardId);
@@ -193,9 +190,9 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
       }
 
       if (matchingCardIds.length > 0) {
-        const updatedPlayers = players.map((p) => ({
+        const updatedPlayers = players.map((p: any) => ({
           ...p,
-          cards: p.cards.filter((c) => !matchingCardIds.includes(c.id)),
+          cards: p.cards.filter((c: any) => !matchingCardIds.includes(c.id)),
         }));
         addLog(get, set, 0, `[HAND] tapped ${matchingCardIds.length} matching card(s)`);
         playTapSuccessSound();
@@ -213,7 +210,7 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
       } else {
         if (drawPile.length > 0) {
           const penaltyCard = drawPile[0];
-          const updatedPlayers = players.map((p, i) =>
+          const updatedPlayers = players.map((p: any, i: number) =>
             i === 0 ? { ...p, cards: [...p.cards, { ...penaltyCard, faceUp: false }] } : p
           );
           set({ players: updatedPlayers, drawPile: drawPile.slice(1) });
@@ -225,16 +222,16 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
     },
 
     tapSwapCard: (ownCardId: string) => {
-      const { tapState, players } = get();
+      const { tapState, players } = get() as any;
       if (!tapState || tapState.phase !== 'swapping' || tapState.swapsRemaining <= 0) return;
       const targetPlayerIndex = tapState.swapTargets[0];
       if (targetPlayerIndex === undefined) return;
 
-      const ownCard = players[0].cards.find((c) => c.id === ownCardId);
+      const ownCard = players[0].cards.find((c: any) => c.id === ownCardId);
       if (!ownCard) return;
 
-      const updatedPlayers = players.map((p, i) => {
-        if (i === 0) return { ...p, cards: p.cards.filter((c) => c.id !== ownCardId) };
+      const updatedPlayers = players.map((p: any, i: number) => {
+        if (i === 0) return { ...p, cards: p.cards.filter((c: any) => c.id !== ownCardId) };
         if (i === targetPlayerIndex) return { ...p, cards: [...p.cards, { ...ownCard, faceUp: false }] };
         return p;
       });
@@ -256,11 +253,11 @@ export function createTapActions(set: StoreSet, get: StoreGet) {
     },
 
     finalizeTap: () => {
-      const { currentPlayerIndex, players, kabooCalled } = get();
+      const { currentPlayerIndex, players, kabooCalled } = get() as any;
       set({ tapState: null });
 
       // Check if any player has 0 cards and trigger auto-Kaboo if not already called
-      const playerWithNoCardsIndex = players.findIndex(p => p.cards.length === 0);
+      const playerWithNoCardsIndex = players.findIndex((p: any) => p.cards.length === 0);
       if (playerWithNoCardsIndex !== -1 && !kabooCalled) {
         get().callKaboo();
         return;

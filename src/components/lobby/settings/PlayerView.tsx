@@ -1,9 +1,12 @@
 import { motion } from 'framer-motion';
-import { useGameStore } from '@/store/gameStore';
+import { GameSettings } from '@/types/game';
 import { TIMER_OPTIONS, TARGET_SCORE_OPTIONS } from './constants';
 
-export function PlayerView() {
-  const { settings } = useGameStore();
+interface PlayerViewProps {
+  settings: GameSettings;
+}
+
+export function PlayerView({ settings }: PlayerViewProps) {
 
   return (
     <motion.div

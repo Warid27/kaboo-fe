@@ -1,57 +1,32 @@
-import { useGameStore } from '@/store/gameStore';
+import { useOfflineStore, resetStore as offlineResetStore } from '@/store/offlineStore';
 import type { vi as ViType } from 'vitest';
 
 export function resetStore() {
-  useGameStore.setState({
-    screen: 'home',
-    gameMode: 'offline',
-    playerName: '',
-    roomCode: '',
-    players: [],
-    settings: { turnTimer: '30', mattsPairsRule: false, useEffectCards: true, numPlayers: 2, botDifficulty: 'medium', targetScore: '100' },
-    gamePhase: 'waiting',
-    turnPhase: 'draw',
-    currentPlayerIndex: 0,
-    drawPile: [],
-    discardPile: [],
-    heldCard: null,
-    effectType: null,
-    turnTimeRemaining: 30,
-    initialLooksRemaining: 2,
-    turnNumber: 0,
-    selectedCards: [],
-    peekedCards: [],
-    memorizedCards: [],
-    tapState: null,
-    penaltySkipTurn: false,
-    showKabooAnnouncement: false,
-    showEffectOverlay: false,
-    dealtCardIds: [],
-    botMemories: {},
-    kabooCalled: false,
-    kabooCallerIndex: null,
-    finalRoundTurnsLeft: 0,
-    roundScores: [],
-    turnLog: [],
-    flyingCards: [],
-  });
+  offlineResetStore();
 }
 
 export function setupDrawPhase(vi: typeof ViType) {
-  const store = useGameStore.getState();
+  const store = useOfflineStore.getState();
   store.setPlayerName('TestPlayer');
   store.updateSettings({ numPlayers: 2 });
-  store.startOffline();
-  store.startGame();
+  store.startOfflineGame();
+  
+  // Wait for initial dealing and dealing -> initial_look transition
   vi.advanceTimersByTime(2500);
 
-  let state = useGameStore.getState();
+  let state = useOfflineStore.getState();
   const cards = state.players[0].cards;
   state.peekCard(cards[0].id);
   vi.advanceTimersByTime(2500);
-  state = useGameStore.getState();
+  
+  state = useOfflineStore.getState();
   state.peekCard(cards[1].id);
   vi.advanceTimersByTime(2500);
+  
+  // Transition to playing phase
+  state = useOfflineStore.getState();
+  state.readyToPlay();
+  
   vi.advanceTimersByTime(1000);
-  return useGameStore.getState();
+  return useOfflineStore.getState();
 }

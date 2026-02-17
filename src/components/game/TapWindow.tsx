@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Hand, RefreshCw } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { isRedSuit } from '@/lib/cardUtils';
 import { cn } from '@/lib/utils';
@@ -9,27 +8,24 @@ import { KeyHint } from './KeyHint';
 import type { Card, Player, TapState } from '@/types/game';
 
 export interface TapWindowProps {
-  tapState?: TapState | null;
-  discardPile?: Card[];
-  players?: Player[];
-  onActivateTap?: () => void;
-  onConfirmTapDiscard?: () => void;
-  onSkipTapSwap?: () => void;
-  onFinalizeTap?: () => void;
+  tapState: TapState | null;
+  discardPile: Card[];
+  players: Player[];
+  onActivateTap: () => void;
+  onConfirmTapDiscard: () => void;
+  onSkipTapSwap: () => void;
+  onFinalizeTap: () => void;
 }
 
-export function TapWindow(props: TapWindowProps) {
-  const store = useGameStore();
-  
-  const tapState = props.tapState ?? store.tapState;
-  const discardPile = props.discardPile ?? store.discardPile;
-  const players = props.players ?? store.players;
-
-  const activateTap = props.onActivateTap ?? store.activateTap;
-  const confirmTapDiscard = props.onConfirmTapDiscard ?? store.confirmTapDiscard;
-  const skipTapSwap = props.onSkipTapSwap ?? store.skipTapSwap;
-  const finalizeTap = props.onFinalizeTap ?? store.finalizeTap;
-
+export function TapWindow({
+  tapState,
+  discardPile,
+  players,
+  onActivateTap,
+  onConfirmTapDiscard,
+  onSkipTapSwap,
+  onFinalizeTap,
+}: TapWindowProps) {
   if (!tapState) return null;
 
   const topDiscard = discardPile[discardPile.length - 1];
@@ -48,7 +44,7 @@ export function TapWindow(props: TapWindowProps) {
           className="fixed bottom-1/3 left-1/2 z-50 flex flex-col items-center gap-2"
         >
           <motion.button
-            onClick={activateTap}
+            onClick={onActivateTap}
             animate={{
               scale: [1, 1.1, 1],
               boxShadow: [
@@ -102,14 +98,14 @@ export function TapWindow(props: TapWindowProps) {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={confirmTapDiscard}
+              onClick={onConfirmTapDiscard}
               disabled={tapState.selectedCardIds.length === 0}
               className="rounded-xl font-display text-sm font-bold gradient-primary text-primary-foreground glow-primary hover:brightness-110 transition-all disabled:opacity-40"
             >
               ✓ Confirm Tap <KeyHint action="confirm" />
             </Button>
             <Button
-              onClick={finalizeTap}
+              onClick={onFinalizeTap}
               variant="outline"
               className="rounded-xl font-display text-sm font-bold"
             >
@@ -141,7 +137,7 @@ export function TapWindow(props: TapWindowProps) {
             </p>
           </div>
           <Button
-            onClick={skipTapSwap}
+            onClick={onSkipTapSwap}
             variant="outline"
             className="rounded-xl font-display text-sm font-bold"
           >

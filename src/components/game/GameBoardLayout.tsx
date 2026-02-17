@@ -18,8 +18,7 @@ import { DevTools } from './DevTools';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
 import { useDevStore } from '@/store/devStore';
 import { GameInstruction } from './useGameInstruction';
-import type { Player, Card, GamePhase, TurnPhase, EffectType, GameSettings, TurnLogEntry, TapState } from '@/types/game';
-import type { FlyingCardEntry } from '@/store/gameStore';
+import type { Player, Card, GamePhase, TurnPhase, EffectType, GameSettings, TurnLogEntry, TapState, FlyingCardEntry } from '@/types/game';
 
 const OPPONENT_POSITIONS = [
   ['top'],
@@ -67,8 +66,22 @@ export interface GameBoardLayoutProps {
   onDiscardHeldCard?: () => void;
   onDiscardPair?: (cardId1: string, cardId2: string) => void;
   onEndTurn?: () => void;
-  onLeaveGame?: () => void;
+  onReady?: () => void;
+  onLeaveGame: () => void;
   onEndGame?: () => void;
+  onActivateTap?: () => void;
+  onConfirmTapDiscard?: () => void;
+  onSkipTapSwap?: () => void;
+  onFinalizeTap?: () => void;
+  onDeclineEffect?: () => void;
+  onConfirmEffect?: () => void;
+  onRemoveFlyingCard?: (id: string) => void;
+  isPaused: boolean;
+  setIsPaused: (paused: boolean) => void;
+  isHost: boolean;
+  isOffline: boolean;
+  canUndo?: boolean;
+  onUndo?: () => void;
 }
 
 export function GameBoardLayout({
@@ -85,30 +98,44 @@ export function GameBoardLayout({
   effectType,
   effectStep,
   effectPreviewCardIds,
-  effectTimeRemaining,
+  effectTimeRemaining = 0,
   settings,
   turnTimeRemaining,
   kabooCalled,
   kabooCallerIndex,
-  showKabooAnnouncement,
+  showKabooAnnouncement = false,
   finalRoundTurnsLeft,
   tapState,
   showEffectOverlay,
   instruction,
   roundNumber,
-  turnLog,
-  flyingCards,
+  turnLog = [],
+  flyingCards = [],
+  isPaused,
+  setIsPaused,
+  isHost,
+  isOffline,
+  canUndo,
+  onUndo,
   onPlayerCardClick,
   onOpponentCardClick,
   onDrawClick,
   onDrawFromDiscard,
-  onCallKaboo,
-  onSwapCard,
-  onDiscardHeldCard,
-  onDiscardPair,
-  onEndTurn,
+  onCallKaboo = () => {},
+  onSwapCard = () => {},
+  onDiscardHeldCard = () => {},
+  onDiscardPair = () => {},
+  onEndTurn = () => {},
+  onReady = () => {},
   onLeaveGame,
   onEndGame,
+  onActivateTap = () => {},
+  onConfirmTapDiscard = () => {},
+  onSkipTapSwap = () => {},
+  onFinalizeTap = () => {},
+  onDeclineEffect = () => {},
+  onConfirmEffect = () => {},
+  onRemoveFlyingCard = () => {},
 }: GameBoardLayoutProps) {
   const anim = useAnimationConfig();
   const { cardScale, pileOffsetX, pileOffsetY, handGap, playerOffsetX, playerOffsetY } = useDevStore();
@@ -154,6 +181,12 @@ export function GameBoardLayout({
             />
           )}
           <OptionsMenu 
+            isPaused={isPaused}
+            setIsPaused={setIsPaused}
+            isHost={isHost}
+            isOffline={isOffline}
+            canUndo={canUndo}
+            onUndo={onUndo}
             onLeave={onLeaveGame} 
             onEndGame={onEndGame} 
           />
@@ -208,8 +241,9 @@ export function GameBoardLayout({
                 tapState?.phase === 'selecting'
               }
               onCardClick={onOpponentCardClick}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              position={positions[i] as any}
+              position={positions[i]}
+              isOffline={isOffline}
+              botDifficulty={settings.botDifficulty}
             />
           ))}
 
@@ -307,6 +341,7 @@ export function GameBoardLayout({
               onDiscardHeldCard={onDiscardHeldCard}
               onDiscardPair={onDiscardPair}
               onEndTurn={onEndTurn}
+              onReady={onReady}
             />
           </>
         )}
@@ -314,26 +349,35 @@ export function GameBoardLayout({
 
       {/* Overlays */}
       <EffectOverlay 
-        showEffectOverlay={showEffectOverlay}
+        showEffectOverlay={!!showEffectOverlay}
         effectType={effectType}
         effectStep={effectStep}
         selectedCards={selectedCards}
         effectPreviewCardIds={effectPreviewCardIds}
         effectTimeRemaining={effectTimeRemaining}
         players={players}
+        onDecline={onDeclineEffect}
+        onConfirm={onConfirmEffect}
       />
       <TapWindow 
         tapState={tapState}
         discardPile={discardPile}
         players={players}
+        onActivateTap={onActivateTap}
+        onConfirmTapDiscard={onConfirmTapDiscard}
+        onSkipTapSwap={onSkipTapSwap}
+        onFinalizeTap={onFinalizeTap}
       />
       <KabooAnnouncement 
         showKabooAnnouncement={showKabooAnnouncement}
-        kabooCallerIndex={kabooCallerIndex}
+        kabooCallerIndex={kabooCallerIndex ?? null}
         players={players}
       />
       <TurnLog turnLog={turnLog} />
-      <FlyingCardLayer flyingCards={flyingCards} />
+      <FlyingCardLayer 
+        flyingCards={flyingCards} 
+        onRemoveFlyingCard={onRemoveFlyingCard}
+      />
       <DevTools />
     </div>
   );

@@ -4,35 +4,34 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Settings, Pause, Play, LogOut, Undo2 } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
-import { useReplayStore } from '@/store/replayStore';
 import { SettingsModal } from './SettingsModal';
 import { Button } from '@/components/ui/button';
 
 export interface OptionsMenuProps {
-  onLeave?: () => void;
+  isPaused: boolean;
+  setIsPaused: (paused: boolean) => void;
+  isHost: boolean;
+  isOffline: boolean;
+  canUndo?: boolean;
+  onUndo?: () => void;
+  onLeave: () => void;
   onEndGame?: () => void;
 }
 
-export function OptionsMenu({ onLeave, onEndGame }: OptionsMenuProps) {
+export function OptionsMenu({
+  isPaused,
+  setIsPaused,
+  isHost,
+  isOffline,
+  canUndo,
+  onUndo,
+  onLeave,
+  onEndGame,
+}: OptionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-
-  const isPaused = useGameStore((s) => s.isPaused);
-  const setIsPaused = useGameStore((s) => s.setIsPaused);
-  const gameMode = useGameStore((s) => s.gameMode);
-  const backToLobby = useGameStore((s) => s.backToLobby);
-  const endGame = useGameStore((s) => s.endGame);
-  const players = useGameStore((s) => s.players);
-  const myPlayerId = useGameStore((s) => s.myPlayerId);
   const router = useRouter();
-
-  const isOffline = gameMode === 'offline';
-  const me = players.find(p => p.id === myPlayerId);
-  const isHost = isOffline || (me?.isHost ?? false);
-
-  const canUndo = useReplayStore((s) => s.canUndo);
 
   const handlePause = () => {
     setIsPaused(!isPaused);
@@ -45,26 +44,8 @@ export function OptionsMenu({ onLeave, onEndGame }: OptionsMenuProps) {
   };
 
   const handleUndo = () => {
-    const snapshot = useReplayStore.getState().undo();
-    if (snapshot) {
-      useGameStore.setState({
-        players: snapshot.players,
-        drawPile: snapshot.drawPile,
-        discardPile: snapshot.discardPile,
-        heldCard: snapshot.heldCard,
-        gamePhase: snapshot.gamePhase,
-        turnPhase: snapshot.turnPhase,
-        currentPlayerIndex: snapshot.currentPlayerIndex,
-        effectType: snapshot.effectType,
-        kabooCalled: snapshot.kabooCalled,
-        kabooCallerIndex: snapshot.kabooCallerIndex,
-        finalRoundTurnsLeft: snapshot.finalRoundTurnsLeft,
-        selectedCards: snapshot.selectedCards,
-        peekedCards: snapshot.peekedCards,
-        memorizedCards: snapshot.memorizedCards,
-        tapState: snapshot.tapState,
-        turnNumber: snapshot.turnNumber,
-      });
+    if (onUndo) {
+      onUndo();
     }
     setOpen(false);
   };
@@ -77,11 +58,7 @@ export function OptionsMenu({ onLeave, onEndGame }: OptionsMenuProps) {
     setOpen(false);
     setShowExitConfirm(false);
     setIsPaused(false);
-    if (onLeave) {
-      onLeave();
-    } else {
-      backToLobby();
-    }
+    onLeave();
     router.push('/');
   };
 
@@ -90,11 +67,6 @@ export function OptionsMenu({ onLeave, onEndGame }: OptionsMenuProps) {
       onEndGame();
       setOpen(false);
       setIsPaused(false);
-      router.push('/');
-    } else if (confirm('Are you sure you want to end the game for everyone?')) {
-      setOpen(false);
-      setIsPaused(false);
-      endGame();
       router.push('/');
     }
   };
@@ -157,7 +129,7 @@ export function OptionsMenu({ onLeave, onEndGame }: OptionsMenuProps) {
                   </button>
 
                   {/* Undo (offline only) */}
-                  {gameMode === 'offline' && (
+                  {isOffline && (
                     <button
                       onClick={handleUndo}
                       disabled={!canUndo}

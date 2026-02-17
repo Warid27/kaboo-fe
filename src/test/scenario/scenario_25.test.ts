@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 25: Negative Score (-2)', () => {
   beforeEach(() => {
@@ -9,10 +9,10 @@ describe('Scenario 25: Negative Score (-2)', () => {
   });
 
   test('should allow a player to reach -2 score with two Jokers', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // Setup: Player 1 has two Jokers
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         {
           id: 'p1',
@@ -55,7 +55,7 @@ describe('Scenario 25: Negative Score (-2)', () => {
 
     store.revealAllCards();
 
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     // Player 1 score should be -2
     expect(state.players[0].score).toBe(-2);
   });

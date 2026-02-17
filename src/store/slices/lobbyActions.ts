@@ -1,21 +1,31 @@
-import type { GameStore } from '../gameStore';
-import type { StoreGet, StoreSet } from '../helpers';
-import { createMockPlayers } from '../helpers';
+import { createMockPlayers, StoreGet, StoreSet } from '../helpers';
 import { createDeck, shuffleDeck, dealCards } from '@/lib/cardUtils';
 import { createBotMemory, botInitialPeek, botRememberCard } from '@/lib/botAI';
-import { INITIAL_STATE } from '../gameStore';
 import { useReplayStore } from '../replayStore';
 import { gameApi } from '@/services/gameApi';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
+import type { GameSettings } from '@/types/game';
 
-export function createLobbyActions(set: StoreSet, get: StoreGet) {
+const INITIAL_STATE = {} as any;
+
+export function createLobbyActions(set: StoreSet<any>, get: StoreGet<any>) {
   return {
-    updateSettings: (partial: Partial<GameStore['settings']>) => {
-      const { gameMode, gameId } = get();
+    updateSettings: (partial: Partial<GameSettings>) => {
+      const state = get() as any;
+      const { gameMode, gameId } = state;
       
-      set((state) => {
-        const newSettings = { ...state.settings, ...partial };
+      set((storeState) => {
+        const state = storeState as {
+          settings: GameSettings;
+          gameMode: 'online' | 'offline';
+          screen: string;
+          playerName: string;
+          players: { id: string; totalScore: number }[];
+        };
+
+        const newSettings: GameSettings = { ...state.settings, ...partial };
+
         if (partial.numPlayers !== undefined && state.gameMode === 'offline' && state.screen === 'lobby') {
           const players = createMockPlayers(partial.numPlayers, state.playerName || 'You');
           const updatedPlayers = players.map((p) => {
@@ -24,6 +34,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
           });
           return { settings: newSettings, players: updatedPlayers };
         }
+
         return { settings: newSettings };
       });
 
@@ -40,7 +51,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     createGame: async () => {
-      const { playerName } = get();
+      const { playerName } = get() as any;
       if (!playerName) return;
 
       try {
@@ -120,7 +131,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     joinGame: async (roomCode: string) => {
-      const { playerName } = get();
+      const { playerName } = get() as any;
       if (!playerName) return;
 
       // Ensure Auth
@@ -179,15 +190,15 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     toggleReady: async () => {
-      const { gameId, myPlayerId, players } = get();
+      const { gameId, myPlayerId, players } = get() as any;
       if (!gameId || !myPlayerId) return;
 
-      const me = players.find(p => p.id === myPlayerId);
+      const me = players.find((p: any) => p.id === myPlayerId);
       const newStatus = !me?.isReady;
 
       // Optimistic update
       set(state => ({
-        players: state.players.map(p => 
+        players: state.players.map((p: any) => 
           p.id === myPlayerId ? { ...p, isReady: newStatus } : p
         )
       }));
@@ -197,7 +208,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       } catch (error) {
         // Revert
         set(state => ({
-          players: state.players.map(p => 
+          players: state.players.map((p: any) => 
             p.id === myPlayerId ? { ...p, isReady: !newStatus } : p
           )
         }));
@@ -210,7 +221,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     kickPlayer: async (playerId: string) => {
-      const { gameId } = get();
+      const { gameId } = get() as any;
       if (!gameId) return;
 
       try {
@@ -230,7 +241,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     checkGameState: async () => {
-        const { gameId } = get();
+        const { gameId } = get() as any;
         if (!gameId) return;
         try {
             const { game_state } = await gameApi.getGameState(gameId);
@@ -248,7 +259,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     startOffline: () => {
-      const { playerName, settings } = get();
+      const { playerName, settings } = get() as any;
       const players = createMockPlayers(settings.numPlayers, playerName || 'You');
       set({
         screen: 'lobby',
@@ -259,7 +270,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     startGame: async () => {
-      const { players, settings, gameMode, gameId } = get();
+      const { players, settings, gameMode, gameId } = get() as any;
 
       if (gameMode === 'online') {
         if (!gameId) return;
@@ -283,18 +294,18 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       const firstDiscard = { ...remaining[0], faceUp: true };
       const drawPile = remaining.slice(1);
 
-      const updatedPlayers = players.map((p, i) => ({
+      const updatedPlayers = players.map((p: any, i: number) => ({
         ...p,
         cards: hands[i],
         score: 0,
         isReady: false,
       }));
 
-      const allDealtCardIds = hands.flat().map((c) => c.id);
+      const allDealtCardIds = hands.flat().map((c: any) => c.id);
 
       const botMemories: Record<string, ReturnType<typeof createBotMemory>> = {};
       if (gameMode === 'offline') {
-        updatedPlayers.forEach((p, i) => {
+        updatedPlayers.forEach((p: any, i: number) => {
           if (i > 0) {
             botMemories[p.id] = createBotMemory();
           }
@@ -321,13 +332,13 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
       setTimeout(() => {
         const state = get();
         if (state.gameMode === 'offline') {
-          const updatedMemories = { ...state.botMemories };
-          state.players.forEach((player, i) => {
+          const updatedMemories = { ...state.botMemories } as any;
+          state.players.forEach((player: any, i: number) => {
             if (i > 0 && updatedMemories[player.id]) {
               const peekIds = botInitialPeek(player, settings.botDifficulty);
               let mem = updatedMemories[player.id];
-              peekIds.forEach((cardId) => {
-                const card = player.cards.find((c) => c.id === cardId);
+              peekIds.forEach((cardId: string) => {
+                const card = player.cards.find((c: any) => c.id === cardId);
                 if (card) {
                   mem = botRememberCard(mem, cardId, card, 0);
                 }
@@ -343,13 +354,13 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     readyToPlay: async () => {
-      const { gameId, gameMode, myPlayerId } = get();
+      const { gameId, gameMode, myPlayerId } = get() as any;
       if (gameMode === 'online') {
         if (!gameId) return;
 
         // Optimistic update
         set((state) => ({
-          players: state.players.map((p) =>
+          players: state.players.map((p: any) =>
             p.id === myPlayerId ? { ...p, isReady: true } : p
           ),
         }));
@@ -359,7 +370,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         } catch {
           // Revert optimistic update
           set((state) => ({
-            players: state.players.map((p) =>
+            players: state.players.map((p: any) =>
               p.id === myPlayerId ? { ...p, isReady: false } : p
             ),
           }));
@@ -377,10 +388,10 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     playAgain: () => {
-      const { players, matchOver } = get();
+      const { players, matchOver } = get() as any;
       if (matchOver) {
         // Match is over — reset everything
-        const resetPlayers = players.map((p) => ({ ...p, cards: [], score: 0, totalScore: 0 }));
+        const resetPlayers = players.map((p: any) => ({ ...p, cards: [], score: 0, totalScore: 0 }));
         set({
           players: resetPlayers,
           screen: 'lobby',
@@ -389,7 +400,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
         });
       } else {
         // Next round — preserve totalScore
-        const resetPlayers = players.map((p) => ({ ...p, cards: [], score: 0 }));
+        const resetPlayers = players.map((p: any) => ({ ...p, cards: [], score: 0 }));
         set({
           players: resetPlayers,
           screen: 'lobby',
@@ -402,7 +413,7 @@ export function createLobbyActions(set: StoreSet, get: StoreGet) {
     },
 
     exitToHome: () => {
-      const { gameId, gameMode, subscription } = get();
+      const { gameId, gameMode, subscription } = get() as any;
 
       if (subscription) {
         subscription.unsubscribe();

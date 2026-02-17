@@ -1,47 +1,46 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, RefreshCw, Trash2, Layers, Check } from 'lucide-react';
-import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { KeyHint } from './KeyHint';
 
 import type { Player, GamePhase, TurnPhase, Card, GameSettings, TapState } from '@/types/game';
 
 export interface ActionButtonsProps {
-  turnPhase?: TurnPhase;
-  gamePhase?: GamePhase;
-  heldCard?: Card | null;
-  currentPlayerIndex?: number;
-  kabooCalled?: boolean;
-  selectedCards?: string[];
-  tapState?: TapState | null;
-  players?: Player[];
-  settings?: GameSettings;
-  onCallKaboo?: () => void;
-  onSwapCard?: (cardId: string) => void;
-  onDiscardHeldCard?: () => void;
-  onDiscardPair?: (cardId1: string, cardId2: string) => void;
-  onEndTurn?: () => void;
+  turnPhase: TurnPhase;
+  gamePhase: GamePhase;
+  heldCard: Card | null;
+  currentPlayerIndex: number;
+  kabooCalled: boolean;
+  selectedCards: string[];
+  tapState: TapState | null;
+  players: Player[];
+  settings: GameSettings;
+  onCallKaboo: () => void;
+  onSwapCard: (cardId: string) => void;
+  onDiscardHeldCard: () => void;
+  onDiscardPair: (cardId1: string, cardId2: string) => void;
+  onEndTurn: () => void;
+  onReady: () => void;
 }
 
 export function ActionButtons(props: ActionButtonsProps) {
-  const store = useGameStore();
   const {
-    turnPhase = props.turnPhase ?? store.turnPhase,
-    gamePhase = props.gamePhase ?? store.gamePhase,
-    heldCard = props.heldCard ?? store.heldCard,
-    currentPlayerIndex = props.currentPlayerIndex ?? store.currentPlayerIndex,
-    kabooCalled = props.kabooCalled ?? store.kabooCalled,
-    selectedCards = props.selectedCards ?? store.selectedCards,
-    tapState = props.tapState ?? store.tapState,
-    players = props.players ?? store.players,
-    settings = props.settings ?? store.settings,
-  } = {};
-
-  const callKaboo = props.onCallKaboo ?? store.callKaboo;
-  const swapCard = props.onSwapCard ?? store.swapCard;
-  const discardHeldCard = props.onDiscardHeldCard ?? store.discardHeldCard;
-  const discardPair = props.onDiscardPair ?? store.discardPair;
-  const endTurn = props.onEndTurn ?? store.endTurn;
+    turnPhase,
+    gamePhase,
+    heldCard,
+    currentPlayerIndex,
+    kabooCalled,
+    selectedCards,
+    tapState,
+    players,
+    settings,
+    onCallKaboo: callKaboo,
+    onSwapCard: swapCard,
+    onDiscardHeldCard: discardHeldCard,
+    onDiscardPair: discardPair,
+    onEndTurn: endTurn,
+    onReady: readyToPlay,
+  } = props;
 
   const isPlayerTurn = currentPlayerIndex === 0;
   if ((!isPlayerTurn && gamePhase !== 'initial_look') || tapState) return null;
@@ -75,7 +74,7 @@ export function ActionButtons(props: ActionButtonsProps) {
           ) : (
             <Button
               onClick={() => {
-                store.readyToPlay();
+                readyToPlay();
               }}
               className="h-12 w-full rounded-xl font-display text-lg font-bold gradient-success text-primary-foreground glow-success hover:brightness-110 transition-all sm:h-12 min-h-[3rem]"
             >

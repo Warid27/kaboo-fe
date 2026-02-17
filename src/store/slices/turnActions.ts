@@ -13,10 +13,10 @@ import { captureSnapshot } from '../snapshotHelper';
 import { gameApi } from '@/services/gameApi';
 import { toast } from '@/components/ui/use-toast';
 
-export function createTurnActions(set: StoreSet, get: StoreGet) {
+export function createTurnActions(set: StoreSet<any>, get: StoreGet<any>) {
   return {
     callKaboo: async (overrideCallerIndex?: number | null) => {
-      const { currentPlayerIndex, players, gameMode, gameId } = get();
+      const { currentPlayerIndex, players, gameMode, gameId } = get() as any;
       const callerIndex = (overrideCallerIndex !== undefined && overrideCallerIndex !== null) ? overrideCallerIndex : currentPlayerIndex;
 
       if (gameMode === 'online') {
@@ -47,10 +47,10 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
     },
 
     endTurn: () => {
-      const { players, currentPlayerIndex, kabooCalled, finalRoundTurnsLeft, settings, turnNumber } = get();
+      const { players, currentPlayerIndex, kabooCalled, finalRoundTurnsLeft, settings, turnNumber } = get() as any;
 
       // Check if any player has 0 cards and trigger auto-Kaboo if not already called
-      const playerWithNoCardsIndex = players.findIndex(p => p.cards.length === 0);
+      const playerWithNoCardsIndex = players.findIndex((p: any) => p.cards.length === 0);
       if (playerWithNoCardsIndex !== -1 && !kabooCalled) {
         get().callKaboo(playerWithNoCardsIndex);
         return;
@@ -64,7 +64,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
         return;
       }
 
-      if (get().drawPile.length === 0) {
+      if ((get() as any).drawPile.length === 0) {
         addLog(get, set, -1, 'Deck exhausted! Auto-Kaboo triggered.');
         set({ gamePhase: 'reveal', kabooCalled: true, kabooCallerIndex: -1 });
         setTimeout(() => { get().revealAllCards(); }, 500);
@@ -92,20 +92,20 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
 
       useReplayStore.getState().pushSnapshot('endTurn', captureSnapshot(get()));
 
-      if (nextPlayerIndex === 0 && get().penaltySkipTurn) {
+      if (nextPlayerIndex === 0 && (get() as any).penaltySkipTurn) {
         set({ penaltySkipTurn: false });
         addLog(get, set, 0, '⏭ turn skipped (penalty)');
         setTimeout(() => get().endTurn(), 500);
         return;
       }
 
-      if (nextPlayerIndex !== 0 && get().gameMode === 'offline') {
+      if (nextPlayerIndex !== 0 && (get() as any).gameMode === 'offline') {
         setTimeout(() => { get().simulateBotTurn(); }, 1200);
       }
     },
 
     simulateBotTurn: () => {
-      const state = get();
+      const state = get() as any;
       const { players, currentPlayerIndex, drawPile, botMemories, kabooCalled, turnNumber, gamePhase, settings } = state;
       const difficulty: BotDifficulty = settings.botDifficulty;
 
@@ -153,7 +153,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
         const decision = botDecideAction(currentBot, drawnCard, currentMemory, turnNumber, difficulty);
 
         if (decision.action === 'swap' && decision.swapCardId) {
-          const cardIndex = currentBot.cards.findIndex((c) => c.id === decision.swapCardId);
+          const cardIndex = currentBot.cards.findIndex((c: any) => c.id === decision.swapCardId);
           if (cardIndex !== -1) {
             const oldCard = { ...currentBot.cards[cardIndex], faceUp: true };
             get().addFlyingCard(oldCard, `card-${decision.swapCardId}`, 'discard-pile');
@@ -162,7 +162,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
             const updatedCards = [...currentBot.cards];
             updatedCards[cardIndex] = newCard;
 
-            const updatedPlayers = currentState.players.map((p, i) =>
+            const updatedPlayers = currentState.players.map((p: any, i: number) =>
               i === currentPlayerIndex ? { ...p, cards: updatedCards } : p
             );
 
@@ -206,12 +206,12 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
               if (effState.currentPlayerIndex !== currentPlayerIndex) return;
 
               const effBot = effState.players[currentPlayerIndex];
-              const opponents = effState.players.filter((_, i) => i !== currentPlayerIndex);
+              const opponents = effState.players.filter((_: any, i: number) => i !== currentPlayerIndex);
               const effMemory = effState.botMemories[bot.id] ?? createBotMemory();
               const resolution = botResolveEffect(effBot, opponents, effect, effMemory, turnNumber, difficulty);
 
               if (effect === 'peek_own' && resolution.targetCardIds[0]) {
-                const targetCard = effBot.cards.find((c) => c.id === resolution.targetCardIds[0]);
+                const targetCard = effBot.cards.find((c: any) => c.id === resolution.targetCardIds[0]);
                 if (targetCard) {
                   const updatedMem = { ...effState.botMemories };
                   updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard, turnNumber);
@@ -219,8 +219,8 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
                   addLog(get, set, currentPlayerIndex, '[EYE] peeked at own card');
                 }
               } else if (effect === 'peek_opponent' && resolution.targetCardIds[0]) {
-                const allCards = effState.players.flatMap((p) => p.cards);
-                const targetCard = allCards.find((c) => c.id === resolution.targetCardIds[0]);
+                const allCards = effState.players.flatMap((p: any) => p.cards);
+                const targetCard = allCards.find((c: any) => c.id === resolution.targetCardIds[0]);
                 if (targetCard) {
                   const updatedMem = { ...effState.botMemories };
                   updatedMem[bot.id] = botRememberCard(effMemory, targetCard.id, targetCard, turnNumber);
@@ -246,7 +246,7 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
                   const temp = updatedPlayers[c1.pi].cards[c1.ci];
                   updatedPlayers[c1.pi] = {
                     ...updatedPlayers[c1.pi],
-                    cards: updatedPlayers[c1.pi].cards.map((card, i) =>
+                    cards: updatedPlayers[c1.pi].cards.map((card: any, i: number) =>
                       i === (c1 as { pi: number; ci: number }).ci
                         ? { ...updatedPlayers[(c2 as { pi: number; ci: number }).pi].cards[(c2 as { pi: number; ci: number }).ci], faceUp: false }
                         : card
@@ -254,15 +254,15 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
                   };
                   updatedPlayers[c2.pi] = {
                     ...updatedPlayers[c2.pi],
-                    cards: updatedPlayers[c2.pi].cards.map((card, i) =>
+                    cards: updatedPlayers[c2.pi].cards.map((card: any, i: number) =>
                       i === (c2 as { pi: number; ci: number }).ci ? { ...temp, faceUp: false } : card
                     ),
                   };
                   
                   // Memory Corruption: All bots forget swapped cards if it was blind
                   // Even if not blind, spectators should forget them.
-                  const updatedMemories = { ...effState.botMemories };
-                  Object.keys(updatedMemories).forEach((bid) => {
+                  const updatedMemories = { ...effState.botMemories } as any;
+                  Object.keys(updatedMemories).forEach((bid: string) => {
                      let m = updatedMemories[bid];
                      m = botForgetCard(m, resolution.targetCardIds[0]);
                      m = botForgetCard(m, resolution.targetCardIds[1]);
@@ -271,9 +271,9 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
  
                    // If it was a vision swap, the current bot remembers the cards it saw/swapped
                    if (effect === 'semi_blind_swap' || effect === 'full_vision_swap') {
-                     const allCards = updatedPlayers.flatMap(p => p.cards);
-                     const card1 = allCards.find(c => c.id === resolution.targetCardIds[0]);
-                     const card2 = allCards.find(c => c.id === resolution.targetCardIds[1]);
+                     const allCards = updatedPlayers.flatMap((p: any) => p.cards);
+                     const card1 = allCards.find((c: any) => c.id === resolution.targetCardIds[0]);
+                     const card2 = allCards.find((c: any) => c.id === resolution.targetCardIds[1]);
                      if (card1) updatedMemories[bot.id] = botRememberCard(updatedMemories[bot.id], card1.id, card1, turnNumber);
                      if (card2) updatedMemories[bot.id] = botRememberCard(updatedMemories[bot.id], card2.id, card2, turnNumber);
                    }
@@ -298,15 +298,15 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
       const { players, kabooCallerIndex, settings } = get();
       const targetScore = parseInt(settings.targetScore);
 
-      const updatedPlayers = players.map((p) => ({
+      const updatedPlayers = players.map((p: any) => ({
         ...p,
-        cards: p.cards.map((c) => ({ ...c, faceUp: true })),
+        cards: p.cards.map((c: any) => ({ ...c, faceUp: true })),
         score: calculateScore(p.cards),
       }));
 
       if (kabooCallerIndex !== null && updatedPlayers[kabooCallerIndex]) {
         const callerScore = updatedPlayers[kabooCallerIndex].score;
-        const otherScores = updatedPlayers.filter((_, i) => i !== kabooCallerIndex).map((p) => p.score);
+        const otherScores = updatedPlayers.filter((_: any, i: number) => i !== kabooCallerIndex).map((p: any) => p.score);
         const minOtherScore = Math.min(...otherScores);
 
         if (callerScore < minOtherScore) {
@@ -320,24 +320,24 @@ export function createTurnActions(set: StoreSet, get: StoreGet) {
         }
       }
 
-      const withTotals = updatedPlayers.map((p) => ({
+      const withTotals = updatedPlayers.map((p: any) => ({
         ...p,
         totalScore: p.totalScore + p.score,
       }));
 
-      const roundScores = withTotals.map((p) => ({
+      const roundScores = withTotals.map((p: any) => ({
         playerId: p.id,
         score: p.score,
       }));
 
       // Check if any player has reached the target score
-      const matchOver = withTotals.some((p) => p.totalScore >= targetScore);
+      const matchOver = withTotals.some((p: any) => p.totalScore >= targetScore);
 
       set({ players: withTotals, roundScores, matchOver });
 
       // Record stats for the human player
       const humanPlayer = withTotals[0];
-      const isWinner = withTotals.every((p) => humanPlayer.score <= p.score);
+      const isWinner = withTotals.every((p: any) => humanPlayer.score <= p.score);
       const calledKaboo = kabooCallerIndex === 0;
       const kabooSuccess = calledKaboo && isWinner;
       useStatsStore.getState().recordRound(humanPlayer.score, isWinner, calledKaboo, kabooSuccess);

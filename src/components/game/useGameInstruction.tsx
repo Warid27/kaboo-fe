@@ -1,13 +1,26 @@
 import { ReactNode } from 'react';
-import { useGameStore } from '@/store/gameStore';
 import { Hand, Target, RefreshCw, ArrowUp, Eye, Search, Shuffle, ScanEye, Crown, ArrowDown } from 'lucide-react';
+import type { GamePhase, TurnPhase, Player, Card, EffectType, TapState } from '@/types/game';
 
 export interface GameInstruction {
   id: string;
   content: ReactNode;
 }
 
-export function useGameInstruction(): GameInstruction | null {
+interface InstructionState {
+  gamePhase: GamePhase;
+  turnPhase: TurnPhase;
+  currentPlayerIndex: number;
+  players: Player[];
+  heldCard: Card | null;
+  effectType: EffectType;
+  effectStep: 'select' | 'preview' | 'resolve' | null;
+  selectedCards: string[];
+  tapState: TapState | null;
+  discardPile: Card[];
+}
+
+export function getInstruction(state: InstructionState): GameInstruction | null {
   const {
     gamePhase,
     turnPhase,
@@ -19,7 +32,7 @@ export function useGameInstruction(): GameInstruction | null {
     selectedCards,
     tapState,
     discardPile,
-  } = useGameStore();
+  } = state;
 
   const isPlayerTurn = currentPlayerIndex === 0;
 

@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 import { Rank, Suit } from '@/types/game';
 
 function createCard(rank: Rank, suit: Suit, id?: string) {
@@ -13,7 +13,7 @@ describe('Scenario 24: Bot Memory Corruption (Hard Mode)', () => {
     vi.useFakeTimers();
     
     // Setup: 1 Player, 1 Hard Bot
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         {
           id: 'p1',
@@ -63,22 +63,22 @@ describe('Scenario 24: Bot Memory Corruption (Hard Mode)', () => {
   });
 
   test('Bot should forget swapped positions after a blind swap', async () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
 
     // 1. Player draws Jack
-    await store.drawCard();
-    expect(useGameStore.getState().heldCard?.rank).toBe('J');
+    store.drawCard();
+    expect(useOfflineStore.getState().heldCard?.rank).toBe('J');
 
     // 2. Player discards Jack to trigger blind swap
-    await store.discardHeldCard();
-    expect(useGameStore.getState().effectType).toBe('blind_swap');
+    store.discardHeldCard();
+    expect(useOfflineStore.getState().effectType).toBe('blind_swap');
 
     // 3. Player swaps Bot's card #1 and card #2 blindly
-    await store.resolveEffect('bot-card-1');
-    await store.resolveEffect('bot-card-2');
-    await store.confirmEffect();
+    store.selectCard('bot-card-1');
+    store.selectCard('bot-card-2');
+    store.confirmEffect();
 
-    const stateAfterSwap = useGameStore.getState();
+    const stateAfterSwap = useOfflineStore.getState();
     const botMemory = stateAfterSwap.botMemories['bot1'];
 
     // Expected: Bot should have forgotten BOTH card IDs involved in the blind swap
@@ -95,7 +95,7 @@ describe('Scenario 24: Bot Memory Corruption (Hard Mode)', () => {
     vi.runAllTimers();
     
     // Bot's turn starts. It should not "know" it has a 3 anymore.
-    const stateBotTurn = useGameStore.getState();
+    const stateBotTurn = useOfflineStore.getState();
     expect(stateBotTurn.currentPlayerIndex).toBe(1);
     
     // If bot knew it had a 3, it might decide to Kaboo or keep it.

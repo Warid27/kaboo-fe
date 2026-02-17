@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '@/store/gameStore';
 import { ChevronUp, ChevronDown, ScrollText, Eye, Search, Shuffle, ScanEye, XCircle, RefreshCw, Crown, Flame, Hand, GalleryVerticalEnd, Heart, Diamond, Club, Spade } from 'lucide-react';
 import type { TurnLogEntry } from '@/types/game';
 
@@ -36,15 +35,13 @@ function formatLogMessage(message: string) {
 }
 
 export interface TurnLogProps {
-  turnLog?: TurnLogEntry[];
+  turnLog: TurnLogEntry[];
 }
 
-export function TurnLog(props: TurnLogProps) {
+export function TurnLog({ turnLog }: TurnLogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const store = useGameStore();
-  const turnLog = props.turnLog ?? store.turnLog;
 
-  if (turnLog.length === 0) return null;
+  if (!turnLog || turnLog.length === 0) return null;
 
   const recentLogs = turnLog.slice(-20).reverse();
 

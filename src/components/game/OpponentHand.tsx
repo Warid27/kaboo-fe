@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import type { Player } from '@/types/game';
-import { useGameStore } from '@/store/gameStore';
 import { PlayingCard } from './PlayingCard';
 import { DifficultyBadge } from './DifficultyBadge';
 import { useAnimationConfig } from '@/hooks/useAnimationConfig';
@@ -13,6 +12,8 @@ interface OpponentHandProps {
   highlightAll?: boolean;
   onCardClick?: (cardId: string) => void;
   position: 'top' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  isOffline: boolean;
+  botDifficulty?: string;
 }
 
 const positionClasses: Record<string, string> = {
@@ -34,6 +35,8 @@ export function OpponentHand({
   highlightAll = false,
   onCardClick,
   position,
+  isOffline,
+  botDifficulty,
 }: OpponentHandProps) {
   const anim = useAnimationConfig();
 
@@ -62,8 +65,8 @@ export function OpponentHand({
           {player.name.charAt(0)}
         </div>
         <span className="font-body text-xs font-semibold text-foreground/70">{player.name}</span>
-        {useGameStore.getState().gameMode === 'offline' && (
-          <DifficultyBadge difficulty={useGameStore.getState().settings.botDifficulty} size="sm" />
+        {isOffline && botDifficulty && (
+          <DifficultyBadge difficulty={botDifficulty as any} size="sm" />
         )}
         {isCurrentTurn && (
           <motion.div

@@ -1,6 +1,5 @@
-import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 31: Bot Difficulty Consistency', () => {
   beforeEach(() => {
@@ -12,18 +11,18 @@ describe('Scenario 31: Bot Difficulty Consistency', () => {
     // This is more of a unit test for the internal config, 
     // but it ensures the foundation for Scenario 31 is solid.
     
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // Check Easy
-    useGameStore.setState({ settings: { ...store.settings, botDifficulty: 'easy' as const, numPlayers: 2, turnTimer: '30' as const, mattsPairsRule: true, useEffectCards: true, targetScore: '100' as const } });
+    useOfflineStore.setState({ settings: { ...store.settings, botDifficulty: 'easy' as const, numPlayers: 2, turnTimer: '30' as const, mattsPairsRule: true, useEffectCards: true, targetScore: '100' as const } });
     // We can't directly access DIFFICULTY_CONFIGS from botAI here as it's not exported,
     // but we can verify behavior if we had exports.
     // Instead, we'll verify the store accepts and maintains the difficulty.
-    expect(useGameStore.getState().settings.botDifficulty).toBe('easy');
+    expect(useOfflineStore.getState().settings.botDifficulty).toBe('easy');
 
     // Check Hard
-    useGameStore.setState({ settings: { ...store.settings, botDifficulty: 'hard' as const, numPlayers: 2, turnTimer: '30' as const, mattsPairsRule: true, useEffectCards: true, targetScore: '100' as const } });
-    expect(useGameStore.getState().settings.botDifficulty).toBe('hard');
+    useOfflineStore.setState({ settings: { ...store.settings, botDifficulty: 'hard' as const, numPlayers: 2, turnTimer: '30' as const, mattsPairsRule: true, useEffectCards: true, targetScore: '100' as const } });
+    expect(useOfflineStore.getState().settings.botDifficulty).toBe('hard');
   });
 
   test('Bot should be able to complete a turn on all difficulties without error', async () => {
@@ -31,9 +30,9 @@ describe('Scenario 31: Bot Difficulty Consistency', () => {
     
     for (const diff of difficulties) {
       resetStore();
-      const store = useGameStore.getState();
+      const store = useOfflineStore.getState();
       
-      useGameStore.setState({
+      useOfflineStore.setState({
         players: [
           { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: [{ id: 'c1', rank: '5' as const, suit: 'hearts' as const, faceUp: false }], score: 0, totalScore: 0, isHost: true, isReady: true },
           { id: 'bot1', name: 'Bot', avatarColor: '#00FF00', cards: [{ id: 'c2', rank: '2' as const, suit: 'hearts' as const, faceUp: false }], score: 0, totalScore: 0, isHost: false, isReady: true },
@@ -52,8 +51,7 @@ describe('Scenario 31: Bot Difficulty Consistency', () => {
           turnTimer: '30' as const,
           mattsPairsRule: true,
           targetScore: '100' as const,
-        },
-        gameMode: 'offline'
+        }
       });
 
       store.simulateBotTurn();
@@ -63,7 +61,7 @@ describe('Scenario 31: Bot Difficulty Consistency', () => {
       vi.advanceTimersByTime(800);  // Decision delay
       vi.advanceTimersByTime(3000); // Tap window
       
-      const state = useGameStore.getState();
+      const state = useOfflineStore.getState();
       expect(state.currentPlayerIndex).toBe(0); // Should have ended turn
     }
   });

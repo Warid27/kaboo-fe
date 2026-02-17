@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 26: Rapid Click Spam', () => {
   beforeEach(() => {
@@ -10,7 +10,7 @@ describe('Scenario 26: Rapid Click Spam', () => {
 
   test('should only process drawCard once even if called multiple times rapidly', async () => {
     // Setup: 2 players, P1's turn to draw
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: [], score: 0, totalScore: 0, isHost: true, isReady: true },
         { id: 'bot', name: 'Bot', avatarColor: '#00FF00', cards: [], score: 0, totalScore: 0, isHost: false, isReady: true },
@@ -33,16 +33,14 @@ describe('Scenario 26: Rapid Click Spam', () => {
     });
 
     // 1. Spam click drawCard 5 times
-    const p1 = useGameStore.getState().drawCard();
-    const p2 = useGameStore.getState().drawCard();
-    const p3 = useGameStore.getState().drawCard();
-    const p4 = useGameStore.getState().drawCard();
-    const p5 = useGameStore.getState().drawCard();
-
-    await Promise.all([p1, p2, p3, p4, p5]);
+    useOfflineStore.getState().drawCard();
+    useOfflineStore.getState().drawCard();
+    useOfflineStore.getState().drawCard();
+    useOfflineStore.getState().drawCard();
+    useOfflineStore.getState().drawCard();
 
     // 2. Verify only 1 card was drawn
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     expect(state.heldCard?.id).toBe('d1');
     expect(state.drawPile.length).toBe(1);
     expect(state.drawPile[0].id).toBe('d2');
@@ -51,7 +49,7 @@ describe('Scenario 26: Rapid Click Spam', () => {
 
   test('should not allow discard if another action is locked', async () => {
     // Setup: P1 has a held card, turnPhase is action
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: [
           { id: 'p1-c1', rank: '2' as const, suit: 'hearts' as const, faceUp: false }
@@ -73,10 +71,10 @@ describe('Scenario 26: Rapid Click Spam', () => {
     });
 
     // Try to discard
-    await useGameStore.getState().discardHeldCard();
+    useOfflineStore.getState().discardHeldCard();
 
     // Verify it didn't happen
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     expect(state.heldCard).not.toBeNull();
     expect(state.heldCard?.id).toBe('d1');
   });

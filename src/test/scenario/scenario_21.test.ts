@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { useGameStore } from '../../store/gameStore';
-import { resetStore } from '../testHelpers';
+import { useOfflineStore } from '../../store/offlineStore';
+import { resetStore } from '../../store/offlineStore';
 
 describe('Scenario 21: Tap Your Own Discard (Self-Steal?)', () => {
   beforeEach(() => {
@@ -9,11 +9,11 @@ describe('Scenario 21: Tap Your Own Discard (Self-Steal?)', () => {
   });
 
   test('should disallow a player from tapping their own discard', () => {
-    const store = useGameStore.getState();
+    const store = useOfflineStore.getState();
     
     // Setup: 2 players. P1 has a card matching the discard.
     // P1 just discarded a card (Rank '5').
-    useGameStore.setState({
+    useOfflineStore.setState({
       players: [
         { id: 'p1', name: 'Player 1', avatarColor: '#FF0000', cards: [
           { id: 'p1-c1', rank: '5' as const, suit: 'hearts' as const, faceUp: false }
@@ -43,7 +43,7 @@ describe('Scenario 21: Tap Your Own Discard (Self-Steal?)', () => {
     store.activateTap();
     store.tapSelectCard('p1-c1');
     
-    const state = useGameStore.getState();
+    const state = useOfflineStore.getState();
     // Verify that the card was NOT selected
     expect(state.tapState?.selectedCardIds).not.toContain('p1-c1');
     expect(state.tapState?.selectedCardIds.length).toBe(0);

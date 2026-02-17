@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { useGameStore } from '@/store/gameStore';
+import { useRouter } from 'next/navigation';
+import { useOnlineStore } from '@/store/onlineStore';
+import { useOfflineStore } from '@/store/offlineStore';
 import { useStatsStore } from '@/store/statsStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +14,10 @@ import { StatsModal } from './StatsModal';
 import { Bot, Gamepad2, Users, BarChart3 } from 'lucide-react';
 
 export function HomeScreen() {
-  const { setPlayerName, playerName, createGame, joinGame, startOffline } = useGameStore();
+  const router = useRouter();
+  const { createGame, joinGame } = useOnlineStore();
+  const { playerName, setPlayerName } = useOfflineStore();
+  const setOfflinePlayerName = useOfflineStore((state) => state.setPlayerName);
   const { totalRoundsPlayed, gamesWon, bestScore } = useStatsStore();
   const [showJoinInput, setShowJoinInput] = useState(false);
   const [joinCode, setJoinCode] = useState('');
@@ -21,20 +26,25 @@ export function HomeScreen() {
 
   const handleCreate = async () => {
     if (!playerName.trim()) return;
-    await createGame();
+    await createGame(playerName);
+    router.push('/online');
   };
 
   const handleJoin = async () => {
     if (!playerName.trim()) return;
     try {
-      await joinGame(joinCode);
+      await joinGame(joinCode, playerName);
+      router.push('/online');
     } catch {
       // Toast is handled in the store action
     }
   };
 
   const handleOffline = () => {
-    startOffline();
+    if (playerName.trim()) {
+      setOfflinePlayerName(playerName);
+    }
+    router.push('/offline');
   };
 
   return (
@@ -182,11 +192,11 @@ export function HomeScreen() {
       {/* Footer */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.5 }}
+        animate={{ opacity: 1 }}
         transition={{ delay: 2 }}
         className="absolute bottom-4 flex items-center gap-3"
       >
-        <span className="font-body text-xs text-muted-foreground">v0.3 — offline mode</span>
+        <span className={`font-body text-xs text-muted-foreground`}>v{process.env.NEXT_PUBLIC_APP_VERSION} — {process.env.NEXT_PUBLIC_APP_DESCRIPTION}</span>
         <Link
           href="/docs"
           className="font-body text-xs text-primary/70 underline-offset-2 hover:text-primary hover:underline transition-colors"

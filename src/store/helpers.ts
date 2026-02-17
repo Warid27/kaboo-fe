@@ -1,11 +1,11 @@
 import type { Player, TurnLogEntry } from '@/types/game';
 import { AVATAR_COLORS, MOCK_PLAYER_NAMES } from '@/types/game';
-import type { GameStore } from './gameStore';
 
-export type StoreGet = () => GameStore;
-export type StoreSet = {
-  (partial: Partial<GameStore> | ((state: GameStore) => Partial<GameStore>)): void;
-};
+export type StoreGet<State = unknown> = () => State;
+
+export type StoreSet<State = unknown> = (
+  partial: Partial<State> | ((state: State) => Partial<State>)
+) => void;
 
 let logIdCounter = 0;
 
@@ -15,7 +15,7 @@ export function addLog(
   playerIndex: number,
   message: string,
 ) {
-  const { players, turnLog } = get();
+  const { players, turnLog } = get() as { players: Player[]; turnLog: TurnLogEntry[] };
   const player = players[playerIndex];
   if (!player) return;
   const entry: TurnLogEntry = {
@@ -24,7 +24,7 @@ export function addLog(
     playerColor: player.avatarColor,
     message,
   };
-  set({ turnLog: [...turnLog, entry] });
+  set({ turnLog: [...turnLog, entry] } as Partial<unknown>);
 }
 
 export function generateRoomCode(): string {
