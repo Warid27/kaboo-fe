@@ -409,7 +409,7 @@ export const useOfflineStore = create<OfflineStore>()(
           return;
         }
 
-        const engineState = GameEngine.resolveEffect(prevState, cardId);
+        const engineState = GameEngine.resolveEffect(prevState);
         const newState: OfflineState = {
           ...prevState,
           ...engineState,
