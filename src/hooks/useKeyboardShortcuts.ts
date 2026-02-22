@@ -184,9 +184,7 @@ export function useKeyboardShortcuts(mode: 'online' | 'offline' = 'online') {
             actions.tapSwapCard?.(card.id);
           } else if (gamePhase === 'initial_look') {
             e.preventDefault();
-            if (mode === 'online') {
-              playOnlineMove({ type: 'PEEK_OWN', cardIndex: idx });
-            } else {
+            if (mode === 'offline') {
               actions.peekCard?.(card.id);
             }
           } else if (isPlayerTurn && turnPhase === 'action') {

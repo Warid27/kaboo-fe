@@ -59,9 +59,7 @@ export function OnlineGameBoard() {
   }, [isMyTurn, gamePhase, turnPhase]);
 
   const handlePlayerCardClick = (cardId: string) => {
-    if (gamePhase === 'initial_look') {
-      playMove({ type: 'PEEK_OWN', cardIndex: getCardIndex(cardId, myPlayerId) });
-    } else if (turnPhase === 'action' && isMyTurn) {
+    if (turnPhase === 'action' && isMyTurn) {
       playMove({ type: 'SWAP_WITH_OWN', ownCardIndex: getCardIndex(cardId, myPlayerId) });
     } else if (turnPhase === 'effect' && isMyTurn && effectType === 'peek_own') {
       playMove({ type: 'PEEK_OWN', cardIndex: getCardIndex(cardId, myPlayerId) });
