@@ -8,7 +8,6 @@ import { gameApi, GameActionPayload } from '@/services/gameApi';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
-import error from 'next/error';
 
 interface OnlineStore {
   // Navigation & Connection
@@ -190,12 +189,12 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   },
 
   createGame: async (playerName) => {
+    if (!playerName?.trim()) return;
     try {
-      // Ensure Auth
       let { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
+        const { data, error: authError } = await supabase.auth.signInAnonymously();
+        if (authError) throw authError;
         session = data.session;
       }
       
@@ -208,31 +207,31 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
       const subscription = gameApi.subscribeToGame(
         gameId, 
         (state) => get().syncFromRemote(state),
-        (error) => {
-          if (error.message === 'You are not in this game') {
-            toast({ title: 'Kicked', description: 'You have been removed', variant: 'destructive' });
+        (subscriptionError) => {
+          if (subscriptionError.message === 'You are not in this game') {
+            toast({ title: 'Kicked from game', description: 'You have been removed', variant: 'destructive' });
             get().resetStore();
           }
         }
       );
 
       set({ gameId, roomCode, screen: 'lobby', subscription });
-    } catch {
+    } catch (createError) {
       toast({
         title: 'Failed to create game',
-        description: error instanceof Error ? error.message : 'Please try again.',
+        description: createError instanceof Error ? createError.message : 'Please try again.',
         variant: 'destructive',
       });
     }
   },
 
   joinGame: async (roomCode, playerName) => {
+    if (!playerName?.trim()) return;
     try {
-      // Ensure Auth
       let { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
+        const { data, error: authError } = await supabase.auth.signInAnonymously();
+        if (authError) throw authError;
         session = data.session;
       }
       
@@ -245,19 +244,19 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
       const subscription = gameApi.subscribeToGame(
         gameId, 
         (state) => get().syncFromRemote(state),
-        (error) => {
-          if (error.message === 'You are not in this game') {
-            toast({ title: 'Kicked', description: 'You have been removed', variant: 'destructive' });
+        (subscriptionError) => {
+          if (subscriptionError.message === 'You are not in this game') {
+            toast({ title: 'Kicked from game', description: 'You have been removed', variant: 'destructive' });
             get().resetStore();
           }
         }
       );
 
       set({ gameId, roomCode, screen: 'lobby', subscription });
-    } catch {
+    } catch (joinError) {
       toast({
         title: 'Failed to join game',
-        description: error instanceof Error ? error.message : 'Please try again.',
+        description: joinError instanceof Error ? joinError.message : 'Please try again.',
         variant: 'destructive',
       });
     }
@@ -281,8 +280,10 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   },
 
   updateSettings: async (partial) => {
-    const { gameId } = get();
+    const { gameId, settings } = get();
     if (!gameId) return;
+    const nextSettings = { ...settings, ...partial };
+    set({ settings: nextSettings });
     try {
       await gameApi.updateSettings(gameId, partial);
     } catch {
@@ -291,8 +292,11 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   },
 
   startGame: async () => {
-    const { gameId } = get();
+    const { gameId, screen } = get();
     if (!gameId) return;
+    if (screen !== 'game') {
+      set({ screen: 'game' });
+    }
     try {
       await gameApi.startGame(gameId);
     } catch {

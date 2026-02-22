@@ -4,6 +4,7 @@ import "../index.css";
 import { Providers } from "./providers";
 import { GlobalSettingsButton } from "@/components/GlobalSettingsButton";
 import { HelpModal } from "@/components/HelpModal";
+import { ProfileMenuButton } from "@/components/ProfileMenuButton";
 
 const fredoka = Fredoka({ subsets: ["latin"], variable: "--font-fredoka" });
 const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito" });
@@ -33,6 +34,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <GlobalSettingsButton />
+          <ProfileMenuButton />
           <HelpModal />
         </Providers>
       </body>

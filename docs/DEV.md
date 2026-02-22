@@ -1,8 +1,8 @@
 # Developer Documentation & Project Status Analysis
 
-**Version:** 0.1.0  
-**Last Updated:** 2026-02-17  
-**Status:** Alpha / MVP (Offline Mode)
+**Version:** 2.0.0  
+**Last Updated:** 2026-02-22  
+**Status:** Alpha / Online backend (Supabase) + Auth/Profile
 
 ## Table of Contents
 
@@ -44,10 +44,17 @@
 Kaboo is installable as a Progressive Web App (PWA) with a service worker and web app manifest.
 
 - **Canonical routes:**
-  - `/` – Home screen and mode selection
-  - `/single` – Offline mode vs bots (uses the `offlineStore` and `GameEngine`)
-  - `/multiplayer` – Online mode vs other players (backed by `onlineStore` and the Supabase backend)
-  - `/docs` – In-app documentation (player guide + developer docs)
+- `/` – Home screen and mode selection
+- `/single` – Offline mode vs bots (uses the `offlineStore` and `GameEngine`)
+- `/multiplayer` – Online mode vs other players (backed by `onlineStore` and the Supabase backend)
+- `/docs` – In-app documentation (player guide + developer docs)
+- `/auth/login` – Email/password login via Supabase Auth
+- `/auth/register` – Email/password signup; sends Supabase verification email
+- `/verified` – Simple confirmation page after email verification
+- `/profile` – User profile: username, avatar URL, stats, and recent game history
+- A global profile button is rendered in the top-right on non-game pages. It:
+  - Opens the login screen when no user is signed in.
+  - Shows a small menu with **My Profile** and **Log Out** when a user (including anonymous) is signed in.
 - Legacy routes `/offline` and `/online` have been removed from the App Router. Any historic references should be updated to `/single` and `/multiplayer`.
 
 ### Service worker behavior
@@ -136,27 +143,38 @@ A robust single-player mode against computer opponents.
 ## Missing Features & Gaps
 
 ### Online Multiplayer
-The most significant gap is the lack of real networking.
-- **Networking Layer:** No WebSocket or HTTP implementation for multiplayer communication.
-- **Lobby Logic:** `createGame` and `joinGame` are currently stubs that mock an online session locally.
-- **Synchronization:** No mechanism to sync game state between clients.
+The multiplayer experience is now backed by a real Supabase project but still needs hardening.
+- **Networking Layer:** Supabase Edge Functions + Realtime are used for lobby creation, joining, ready states, and game progression.
+- **Lobby Logic:** `createGame`, `joinGame`, `toggle-ready`, `start-game`, `leave-game`, and related flows are implemented against Supabase tables.
+- **Synchronization:** Realtime listeners keep clients in sync, but edge cases and reconnect behavior still need more testing and polish.
 
 ### Backend & Persistence
-- **API:** No backend server exists. The project is currently client-side only.
-- **Database:** No persistence for:
-    - User accounts.
-    - Match history.
-    - Leaderboards.
-    - Game session state (refreshing the page resets the game).
+- **API:** A Supabase backend now exists with Edge Functions for core game flows and profile management (`create-game`, `join-game`, `get-profile`, `update-profile`, etc.).
+- **Database:** Postgres tables store:
+    - User accounts and profiles.
+    - Match metadata and game state.
+    - Basic match history for the profile page.
+- **Still Missing / Planned:**
+    - Public leaderboards.
+    - Long-term analytics / telemetry.
+    - Admin tooling and data cleanup routines.
 
 ### Authentication
-- **User System:** No login/signup functionality.
-- **Profiles:** Users act as "Guest" with a temporary name.
+- **User System:** Email/password auth is implemented via Supabase Auth.
+    - `/auth/register` – creates an account and sends a verification email.
+    - `/auth/login` – logs in with email/password.
+    - `/verified` – landing page after email verification.
+- **Profiles:** A real profile layer now exists:
+    - `/profile` renders username, avatar URL, join date, aggregate stats, and recent games.
+    - Users can edit username and avatar URL, which are persisted in the backend.
+- **Known Gaps:**
+    - No social login providers configured yet.
+    - No in-app password reset/change UI (Supabase reset links can still be used).
 
 ### Testing & QA
-- **Test Coverage:** Basic unit tests exist in `src/test/`, but integration tests for full game flows are limited.
-- **E2E Testing:** No End-to-End (Cypress/Playwright) tests setup.
-- **Edge Cases:** Complex interaction chains (e.g., multiple taps in quick succession) may need more robust stress testing.
+- **Test Coverage:** Basic unit tests exist in `src/test/`, plus real-Supabase integration tests for online flows and profile endpoints (see `docs/REAL_API_TESTS.md`).
+- **E2E Testing:** No browser-level End-to-End (Cypress/Playwright) test suite is set up yet.
+- **Edge Cases:** Complex interaction chains (e.g., multiple taps in quick succession, reconnects, and race conditions in multiplayer) still need more robust stress testing.
 
 ---
 

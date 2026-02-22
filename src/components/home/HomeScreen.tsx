@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { FloatingCard } from './FloatingCard';
 import { StatsModal } from './StatsModal';
 import { Bot, Gamepad2, Users, BarChart3 } from 'lucide-react';
+import { useProfile } from '@/hooks/useProfile';
 
 export function HomeScreen() {
   const router = useRouter();
@@ -23,17 +24,31 @@ export function HomeScreen() {
   const [joinCode, setJoinCode] = useState('');
   const [showStats, setShowStats] = useState(false);
   const isOnline = process.env.NEXT_PUBLIC_IS_ONLINE === 'true';
+  const { profile } = useProfile();
+
+  useEffect(() => {
+    if (!profile) return;
+
+    const current = playerName.trim();
+    if (current && current !== 'Player') return;
+
+    const username = profile.username?.trim() ?? '';
+    if (!username) return;
+
+    const truncated = username.slice(0, 16);
+    setPlayerName(truncated);
+  }, [profile, playerName, setPlayerName]);
 
   const handleCreate = async () => {
     if (!playerName.trim()) return;
-    await createGame(playerName);
+    await createGame(playerName.trim());
     router.push('/multiplayer');
   };
 
   const handleJoin = async () => {
     if (!playerName.trim()) return;
     try {
-      await joinGame(joinCode, playerName);
+      await joinGame(joinCode, playerName.trim());
       router.push('/multiplayer');
     } catch {
       // Toast is handled in the store action

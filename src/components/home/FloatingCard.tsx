@@ -19,7 +19,7 @@ export function FloatingCard({ suit, rank, delay, x, y, rotation }: FloatingCard
     <motion.div
       initial={{ opacity: 0, scale: 0.5, x: 0, y: 0, rotate: 0 }}
       animate={{
-        opacity: [0, 0.25, 0.15],
+        opacity: [0, 0.25, 0.5],
         scale: [0.5, 1, 1],
         x,
         y,

@@ -1,8 +1,8 @@
 {
   "name": "kaboo-fe",
   "private": true,
-  "version": "1.0.0",
-  "description": "Offline Mode",
+  "version": "2.0.0",
+  "description": "Online Mode",
   "type": "module",
   "scripts": {
     "dev": "next dev",
