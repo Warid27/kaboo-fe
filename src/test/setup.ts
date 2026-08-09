@@ -1,9 +1,7 @@
 import "@testing-library/jest-dom";
 import { WebSocket } from 'ws';
 
-// Polyfill WebSocket for Supabase Realtime in jsdom
-// @ts-expect-error - WebSocket polyfill for test environment
-global.WebSocket = WebSocket;
+global.WebSocket = WebSocket as unknown as typeof globalThis.WebSocket;
 
 // Polyfill for Request in test environment
 global.Request = Request;

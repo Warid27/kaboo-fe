@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { gameApi } from "@/services/gameApi";
 
 type Profile = {
   id: string;
@@ -46,45 +46,28 @@ export function useProfile(): UseProfileResult {
       setError(null);
 
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
+        const me = await gameApi.getMe();
         if (cancelled) return;
 
-        const session = sessionData.session;
-
-        if (!session?.access_token) {
+        if (!me) {
           setProfile(null);
           setStatus("logged_out");
           return;
         }
 
-        if (session.user?.is_anonymous) {
-          setProfile(null);
-          setStatus("logged_out");
-          return;
-        }
-
-        const { data, error: fnError } = await supabase.functions.invoke<ProfileResponse>("get-profile");
-
+        const data = await gameApi.getProfile() as ProfileResponse;
         if (cancelled) return;
 
-        if (fnError) {
-          if (fnError.message.includes("Unauthorized")) {
-            setProfile(null);
-            setStatus("logged_out");
-            return;
-          }
-
-          setError(fnError.message ?? "Failed to load profile");
-          setStatus("error");
-          return;
-        }
-
-        const body = data as ProfileResponse;
-
-        setProfile(body.profile);
+        setProfile(data.profile);
         setStatus("loaded");
       } catch (err) {
         if (cancelled) return;
+
+        if (err instanceof Error && err.message.includes("Unauthorized")) {
+          setProfile(null);
+          setStatus("logged_out");
+          return;
+        }
 
         setError(err instanceof Error ? err.message : "Failed to load profile");
         setStatus("error");

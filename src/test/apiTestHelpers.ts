@@ -1,47 +1,32 @@
-import { supabase } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { gameApi } from '@/services/gameApi';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export async function getSessionTokens() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return null;
-  return { 
-    access_token: session.access_token, 
-    refresh_token: session.refresh_token,
-    user: session.user 
-  };
-}
-
-export async function signInAnon() {
-  const { data, error } = await supabase.auth.signInAnonymously();
-  if (error) throw error;
+  const me = await gameApi.getMe();
+  if (!me) return null;
   return {
-    user: data.user,
-    session: data.session
+    userId: me.userId,
+    email: me.email,
   };
 }
 
-export async function setSession(tokens: { access_token: string; refresh_token: string; user: User } | null) {
-  if (!tokens) {
-    await supabase.auth.signOut();
-    return;
-  }
-  
-  const { error } = await supabase.auth.setSession({
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-  });
+export async function signInWithCredentials(email: string, password: string) {
+  await gameApi.login(email, password);
+  const me = await gameApi.getMe();
+  return me;
+}
 
-  if (error) {
-    throw error;
-  }
+export async function registerUser(email: string, password: string) {
+  const result = await gameApi.register(email, password);
+  return result;
 }
 
 export async function signOut() {
-  await supabase.auth.signOut();
+  await gameApi.logout();
 }
 
-export function hasSupabaseEnv() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return !!url && !!anon && !url.includes('placeholder') && !anon.includes('placeholder');
+export function hasApiEnv() {
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  return !!url && !url.includes('placeholder');
 }

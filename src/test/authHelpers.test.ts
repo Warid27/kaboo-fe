@@ -1,144 +1,64 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-import { getSessionTokens, signInAnon, setSession, signOut } from './apiTestHelpers';
+import { gameApi } from '@/services/gameApi';
+import { getSessionTokens, signInWithCredentials, registerUser, signOut } from './apiTestHelpers';
+
+vi.mock('@/services/gameApi', () => ({
+  gameApi: {
+    getMe: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+    register: vi.fn(),
+  },
+}));
 
 describe('auth helpers', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('getSessionTokens returns null when no session', async () => {
-    const getSessionMock = vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session: null },
-      error: null,
-    } as any);
+  it('getSessionTokens returns null when not authenticated', async () => {
+    vi.mocked(gameApi.getMe).mockResolvedValue(null);
 
     const result = await getSessionTokens();
 
-    expect(getSessionMock).toHaveBeenCalledTimes(1);
     expect(result).toBeNull();
   });
 
-  it('getSessionTokens returns tokens when session exists', async () => {
-    const session = {
-      access_token: 'access',
-      refresh_token: 'refresh',
-      user: { id: 'user-id' },
-    };
-
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session },
-      error: null,
-    } as any);
+  it('getSessionTokens returns user info when authenticated', async () => {
+    vi.mocked(gameApi.getMe).mockResolvedValue({ userId: 'user-id', email: 'test@example.com' });
 
     const result = await getSessionTokens();
 
     expect(result).not.toBeNull();
-    expect(result?.access_token).toBe('access');
-    expect(result?.refresh_token).toBe('refresh');
-    expect(result?.user.id).toBe('user-id');
+    expect(result?.userId).toBe('user-id');
+    expect(result?.email).toBe('test@example.com');
   });
 
-  it('signInAnon returns user and session on success', async () => {
-    const user = { id: 'user-id' };
-    const session = { access_token: 'access' };
+  it('signInWithCredentials calls login and returns user', async () => {
+    vi.mocked(gameApi.login).mockResolvedValue(undefined);
+    vi.mocked(gameApi.getMe).mockResolvedValue({ userId: 'user-id', email: 'test@example.com' });
 
-    const signInMock = vi.spyOn(supabase.auth, 'signInAnonymously').mockResolvedValue({
-      data: { user, session },
-      error: null,
-    } as any);
+    const result = await signInWithCredentials('test@example.com', 'password');
 
-    const result = await signInAnon();
-
-    expect(signInMock).toHaveBeenCalledTimes(1);
-    expect(result.user).toBe(user);
-    expect(result.session).toBe(session);
+    expect(gameApi.login).toHaveBeenCalledWith('test@example.com', 'password');
+    expect(result?.userId).toBe('user-id');
   });
 
-  it('signInAnon throws on error', async () => {
-    const signInError = new Error('sign-in failed');
+  it('registerUser calls register and returns userId', async () => {
+    vi.mocked(gameApi.register).mockResolvedValue({ userId: 'new-user-id' });
 
-    vi.spyOn(supabase.auth, 'signInAnonymously').mockResolvedValue({
-      data: { user: null, session: null },
-      error: signInError,
-    } as any);
+    const result = await registerUser('test@example.com', 'password');
 
-    await expect(signInAnon()).rejects.toThrow('sign-in failed');
+    expect(gameApi.register).toHaveBeenCalledWith('test@example.com', 'password');
+    expect(result?.userId).toBe('new-user-id');
   });
 
-  it('setSession(null) signs out', async () => {
-    const signOutMock = vi.spyOn(supabase.auth, 'signOut').mockResolvedValue({
-      error: null,
-    } as any);
-
-    await setSession(null);
-
-    expect(signOutMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('setSession sets session tokens', async () => {
-    const setSessionMock = vi.spyOn(supabase.auth, 'setSession').mockResolvedValue({
-      data: { session: {} },
-      error: null,
-    } as any);
-
-    const mockUser: User = {
-      id: 'user-id',
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-      app_metadata: {},
-      user_metadata: {},
-    };
-
-    const tokens = {
-      access_token: 'access',
-      refresh_token: 'refresh',
-      user: mockUser,
-    };
-
-    await setSession(tokens);
-
-    expect(setSessionMock).toHaveBeenCalledTimes(1);
-    expect(setSessionMock).toHaveBeenCalledWith({
-      access_token: 'access',
-      refresh_token: 'refresh',
-    });
-  });
-
-  it('setSession throws when setSession returns error', async () => {
-    const error = new Error('setSession failed');
-
-    vi.spyOn(supabase.auth, 'setSession').mockResolvedValue({
-      data: { session: null },
-      error,
-    } as any);
-
-    const mockUser: User = {
-      id: 'user-id',
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-      app_metadata: {},
-      user_metadata: {},
-    };
-
-    const tokens = {
-      access_token: 'access',
-      refresh_token: 'refresh',
-      user: mockUser,
-    };
-
-    await expect(setSession(tokens)).rejects.toThrow('setSession failed');
-  });
-
-  it('signOut calls supabase auth signOut', async () => {
-    const signOutMock = vi.spyOn(supabase.auth, 'signOut').mockResolvedValue({
-      error: null,
-    } as any);
+  it('signOut calls logout', async () => {
+    vi.mocked(gameApi.logout).mockResolvedValue(undefined);
 
     await signOut();
 
-    expect(signOutMock).toHaveBeenCalledTimes(1);
+    expect(gameApi.logout).toHaveBeenCalledTimes(1);
   });
 });
 

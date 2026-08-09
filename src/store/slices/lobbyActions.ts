@@ -3,7 +3,6 @@ import { createDeck, shuffleDeck, dealCards } from '@/lib/cardUtils';
 import { createBotMemory, botInitialPeek, botRememberCard } from '@/lib/botAI';
 import { useReplayStore } from '../replayStore';
 import { gameApi } from '@/services/gameApi';
-import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import type { GameSettings } from '@/types/game';
 
@@ -55,55 +54,21 @@ export function createLobbyActions(set: StoreSet<any>, get: StoreGet<any>) {
       if (!playerName) return;
 
       try {
-        // Ensure Auth with robust session check
-        let { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          const { data, error } = await supabase.auth.signInAnonymously();
-          if (error) throw error;
-          session = data.session;
-        } else {
-          // Optional: Refresh session to ensure token is fresh
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-          if (!refreshError && refreshData.session) {
-            session = refreshData.session;
-          }
-        }
-        
-        if (session?.user?.id) {
-          set({ myPlayerId: session.user.id });
+        const me = await gameApi.getMe();
+        if (me?.userId) {
+          set({ myPlayerId: me.userId });
         }
 
-        const { gameId, roomCode } = await gameApi.createGame(playerName);
+        const { code: roomCode } = await gameApi.createRoom();
         
-        // Subscribe to game updates
-        const subscription = gameApi.subscribeToGame(
-          gameId, 
-          (state) => {
-            get().syncFromRemote(state);
-          },
-          (error) => {
-            if (error.message === 'You are not in this game') {
-              toast({
-                title: 'Kicked from game',
-                description: 'You have been removed from the game.',
-                variant: 'destructive',
-              });
-              get().exitToHome();
-            }
-          }
-        );
-
         set({
           screen: 'lobby',
           gameMode: 'online',
           roomCode,
-          gameId,
-          players: [], // Will be synced via subscription
-          subscription,
+          gameId: roomCode,
+          players: [],
         });
 
-        // Initial state fetch
         get().checkGameState();
       } catch (error) {
         toast({
@@ -134,51 +99,22 @@ export function createLobbyActions(set: StoreSet<any>, get: StoreGet<any>) {
       const { playerName } = get() as any;
       if (!playerName) return;
 
-      // Ensure Auth
-      let userId = (await supabase.auth.getUser()).data.user?.id;
-      if (!userId) {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) {
-          return;
-        }
-        userId = data.user?.id;
-      }
-
-      if (userId) {
-        set({ myPlayerId: userId });
-      }
-
       try {
-        const { gameId } = await gameApi.joinGame(roomCode, playerName);
-        
-        // Subscribe to game updates
-        const subscription = gameApi.subscribeToGame(
-          gameId, 
-          (state) => {
-            get().syncFromRemote(state);
-          },
-          (error) => {
-            if (error.message === 'You are not in this game') {
-              toast({
-                title: 'Kicked from game',
-                description: 'You have been removed from the game.',
-                variant: 'destructive',
-              });
-              get().exitToHome();
-            }
-          }
-        );
+        const me = await gameApi.getMe();
+        if (me?.userId) {
+          set({ myPlayerId: me.userId });
+        }
 
+        const { code: joinedCode } = await gameApi.joinRoom(roomCode);
+        
         set({
           screen: 'lobby',
           gameMode: 'online',
-          roomCode,
-          gameId,
-          players: [], // Will be synced via subscription
-          subscription,
+          roomCode: joinedCode,
+          gameId: joinedCode,
+          players: [],
         });
 
-        // Initial state fetch
         get().checkGameState();
       } catch (error) {
         toast({

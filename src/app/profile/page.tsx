@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { gameApi } from "@/services/gameApi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,35 +55,28 @@ export default function ProfilePage() {
       setLoading(true);
       setError(null);
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const session = sessionData.session;
-
-        if (!session?.access_token) {
+        const me = await gameApi.getMe();
+        
+        if (!me) {
           router.replace("/auth/login");
           return;
         }
 
-        const { data, error } = await supabase.functions.invoke<ProfileResponse>("get-profile");
-
-        if (error) {
-          if (error.message.includes("Unauthorized")) {
-            await supabase.auth.signOut();
-            router.replace("/auth/login");
-            return;
-          }
-          throw error;
-        }
-
-        const body = data as ProfileResponse;
+        const data = await gameApi.getProfile() as ProfileResponse;
         if (cancelled) return;
 
-        setProfile(body);
+        setProfile(data);
         form.reset({
-          username: body.profile.username,
-          avatarUrl: body.profile.avatarUrl ?? "",
+          username: data.profile.username,
+          avatarUrl: data.profile.avatarUrl ?? "",
         });
       } catch (err) {
         if (cancelled) return;
+        if (err instanceof Error && err.message.includes("Unauthorized")) {
+          await gameApi.logout();
+          router.replace("/auth/login");
+          return;
+        }
         setError(err instanceof Error ? err.message : "Failed to load profile");
       } finally {
         if (!cancelled) setLoading(false);
@@ -101,21 +94,11 @@ export default function ProfilePage() {
     setSaving(true);
     setError(null);
     try {
-      const { data, error } = await supabase.functions.invoke<{ profile: ProfileResponse["profile"] }>(
-        "update-profile",
-        {
-          body: {
-            username: values.username,
-            avatarUrl: values.avatarUrl.trim() || null,
-          },
-        },
-      );
+      const updated = await gameApi.updateProfile({
+        username: values.username,
+        avatarUrl: values.avatarUrl.trim() || null,
+      }) as { profile: ProfileResponse["profile"] };
 
-      if (error) {
-        throw error;
-      }
-
-      const updated = data as { profile: ProfileResponse["profile"] };
       setProfile((prev) =>
         prev
           ? {
@@ -136,7 +119,7 @@ export default function ProfilePage() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await gameApi.logout();
     router.replace("/");
   };
 

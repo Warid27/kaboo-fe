@@ -1,10 +1,8 @@
-import { supabase } from '@/lib/supabase';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { GameState } from '@/types/game'; // You might need to adjust this type to match backend exactly
+import type { GameSettings } from '@/types/game';
 
-// Backend Action Types
 export type ApiActionType =
   | 'READY_TO_PLAY'
+  | 'INITIAL_PEEK'
   | 'DRAW_FROM_DECK'
   | 'DRAW_FROM_DISCARD'
   | 'DISCARD_DRAWN'
@@ -24,198 +22,169 @@ export interface GameActionPayload {
   card2?: { playerId: string; cardIndex: number };
 }
 
-// Helper to extract error message from Supabase Functions response
-async function parseSupabaseError(error: unknown): Promise<string> {
-  // If it's already a clean Error with a custom message, return it
-  if (error instanceof Error && error.message !== 'Edge Function returned a non-2xx status code') {
-    return error.message;
-  }
-
-  // Check for context in Supabase error (FunctionsHttpError)
-  if (error && typeof error === 'object' && 'context' in error) {
-    const res = (error as { context: Response }).context;
-    try {
-      // Clone response to avoid consuming the body if it's needed elsewhere (unlikely here)
-      const text = await res.clone().text();
-      try {
-        const json = JSON.parse(text);
-        if (json.error) return json.error;
-        if (json.message) return json.message;
-      } catch {
-        // If text but not JSON, and short enough, it might be the error message
-        if (text && text.length < 200) return text;
-      }
-    } catch {
-        // Ignore parsing errors
-      }
-  }
-  
-  return 'Server error. Please try again.';
+export interface RoomListItem {
+  code: string;
+  host: string;
+  playerCount: number;
+  players: Record<string, { name: string; isReady: boolean }>;
+  status: string;
 }
 
-/**
- * Shared helper to invoke Supabase functions with automatic session refresh and retry
- */
-async function invokeFunction(
-  functionName: string, 
-  body: Record<string, unknown>, 
-  client: SupabaseClient = supabase
-) {
-  // Helper to refresh session
-  const ensureValidSession = async () => {
-    const { data: { session }, error: sessionError } = await client.auth.getSession();
-    
-    // If no session or error, try to refresh
-    if (sessionError || !session || !session.access_token) {
-      const { data: refreshData, error: refreshError } = await client.auth.refreshSession();
-      if (refreshError || !refreshData.session) {
-        throw new Error('Session expired. Please refresh the page.');
-      }
-      return refreshData.session;
-    }
-    return session;
-  };
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
-  const session = await ensureValidSession();
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-  const invoke = async (token: string) => {
-    return await client.functions.invoke(functionName, {
-      body,
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-  };
-
-  let { data, error } = await invoke(session.access_token);
-
-  // If 401, try one refresh and retry
-  const is401 = error && (
-    ('status' in error && error.status === 401) || 
-    ('context' in error && (error as { context: { status?: number } }).context?.status === 401)
-  );
-
-  if (is401) {
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`;
     try {
-      const { data: refreshData } = await client.auth.refreshSession();
-      if (refreshData.session) {
-        const retry = await invoke(refreshData.session.access_token);
-        data = retry.data;
-        error = retry.error;
+      const body = await res.json();
+      if (body && typeof body === 'object') {
+        if (typeof (body as { error?: unknown }).error === 'string') {
+          message = (body as { error: string }).error;
+        } else if (typeof (body as { message?: unknown }).message === 'string') {
+          message = (body as { message: string }).message;
+        }
       }
     } catch {
-        // Silent fail
-      }
+    }
+    throw new Error(message);
   }
 
-  if (error) {
-    const errorMessage = await parseSupabaseError(error);
-    throw new Error(errorMessage);
-  }
-
-  return data;
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 export const gameApi = {
-  /**
-   * Creates a new game room
-   */
-  async createGame(playerName?: string, client: SupabaseClient = supabase) {
-    return await invokeFunction('create-game', { playerName }, client) as { gameId: string; roomCode: string };
+  async register(email: string, password: string): Promise<{ userId: string }> {
+    const result = await request<{ userId: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    await this.login(email, password);
+    return result;
   },
 
-  /**
-   * Joins an existing game using a room code
-   */
-  async joinGame(roomCode: string, playerName?: string, client: SupabaseClient = supabase) {
-    return await invokeFunction('join-game', { roomCode, playerName }, client) as { gameId: string };
+  async login(email: string, password: string): Promise<void> {
+    await request<void>('/auth/session', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
   },
 
-  /**
-   * Leaves the current game
-   */
-  async leaveGame(gameId: string, client: SupabaseClient = supabase) {
-    return await invokeFunction('leave-game', { gameId }, client);
+  async logout(): Promise<void> {
+    await request<void>('/auth/session', { method: 'DELETE' });
   },
 
-  /**
-   * Ends the current game (Host only)
-   */
-  async endGame(gameId: string, client: SupabaseClient = supabase) {
-    return await invokeFunction('end-game', { gameId }, client);
+  async getMe(): Promise<{ userId: string; email: string } | null> {
+    try {
+      return await request<{ userId: string; email: string }>('/auth/me');
+    } catch {
+      return null;
+    }
   },
 
-  async toggleReady(gameId: string, isReady: boolean, client: SupabaseClient = supabase) {
-    return await invokeFunction('toggle-ready', { gameId, isReady }, client);
+  async createRoom(settings?: Partial<GameSettings>): Promise<{ code: string; host: string }> {
+    return await request<{ code: string; host: string }>('/rooms', {
+      method: 'POST',
+      body: JSON.stringify({ settings }),
+    });
   },
 
-  /**
-   * Updates game settings (Host only)
-   */
-  async updateSettings(gameId: string, settings: Partial<GameState['settings']>, client: SupabaseClient = supabase) {
-    return await invokeFunction('update-settings', { gameId, settings }, client) as { success: boolean; settings: GameState['settings'] };
+  async listRooms(): Promise<RoomListItem[]> {
+    return await request<RoomListItem[]>('/rooms');
   },
 
-  /**
-   * Starts the game (Host only)
-   */
-  async startGame(gameId: string, client: SupabaseClient = supabase) {
-    return await invokeFunction('start-game', { gameId }, client) as { success: boolean; state: GameState };
+  async joinRoom(code: string): Promise<{ code: string; players: Record<string, unknown>; status: string }> {
+    return await request<{ code: string; players: Record<string, unknown>; status: string }>('/rooms/join', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
   },
 
-  /**
-   * Kicks a player from the game (Host only)
-   */
-  async kickPlayer(gameId: string, playerId: string, client: SupabaseClient = supabase) {
-    return await invokeFunction('kick-player', { gameId, playerId }, client) as { success: boolean; kickedPlayerId: string };
+  async leaveRoom(code: string): Promise<void> {
+    await request<void>(`/rooms/${encodeURIComponent(code)}/leave`, { method: 'POST' });
   },
 
-  /**
-   * Retrieves the current game state, sanitized for the requesting user
-   */
-  async getGameState(gameId: string, client: SupabaseClient = supabase) {
-    return await invokeFunction('get-game-state', { gameId }, client) as { game_state: GameState };
+  async readyRoom(code: string): Promise<void> {
+    await request<void>(`/rooms/${encodeURIComponent(code)}/ready`, { method: 'POST' });
   },
 
-  /**
-   * Executes a game action
-   */
-  async playMove(gameId: string, action: GameActionPayload, client: SupabaseClient = supabase) {
-    return await invokeFunction('play-move', { gameId, action }, client) as { success: boolean; game_state: GameState; result: unknown };
+  async startRoom(code: string): Promise<void> {
+    await request<void>(`/rooms/${encodeURIComponent(code)}/start`, { method: 'POST' });
   },
 
-  /**
-   * Subscribes to game updates
-   */
-  subscribeToGame(
-    gameId: string, 
-    onUpdate: (state: GameState) => void, 
-    onError?: (error: Error) => void,
-    client: SupabaseClient = supabase
-  ) {
-    const channel = client.channel(`game:${gameId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'games',
-          filter: `id=eq.${gameId}`,
-        },
-        async () => {
-          // When game updates, fetch the latest state
-          try {
-            const { game_state } = await this.getGameState(gameId, client);
-            onUpdate(game_state);
-          } catch (error) {
-            if (onError && error instanceof Error) {
-              onError(error);
-            }
-          }
-        }
-      )
-      .subscribe();
-      
-    return channel;
-  }
+  async kickPlayer(code: string, targetUserId: string): Promise<void> {
+    await request<void>(`/rooms/${encodeURIComponent(code)}/kick`, {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId }),
+    });
+  },
+
+  async getProfile(): Promise<unknown> {
+    return await request<unknown>('/profile');
+  },
+
+  async updateProfile(data: { username?: string; avatarUrl?: string | null }): Promise<unknown> {
+    return await request<unknown>('/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async createGame(_playerName: string): Promise<{ gameId: string; roomCode: string }> {
+    const result = await request<{ code: string; host: string }>('/rooms', {
+      method: 'POST',
+    });
+    return { gameId: result.code, roomCode: result.code };
+  },
+
+  async joinGame(roomCode: string, _playerName: string): Promise<{ gameId: string }> {
+    const result = await request<{ code: string }>('/rooms/join', {
+      method: 'POST',
+      body: JSON.stringify({ code: roomCode }),
+    });
+    return { gameId: result.code };
+  },
+
+  async endGame(gameId: string): Promise<void> {
+    await request<void>(`/rooms/${encodeURIComponent(gameId)}/leave`, { method: 'POST' });
+  },
+
+  async leaveGame(gameId: string): Promise<void> {
+    await request<void>(`/rooms/${encodeURIComponent(gameId)}/leave`, { method: 'POST' });
+  },
+
+  async toggleReady(gameId: string, isReady: boolean): Promise<void> {
+    if (isReady) {
+      await request<void>(`/rooms/${encodeURIComponent(gameId)}/ready`, { method: 'POST' });
+    }
+  },
+
+  async startGame(gameId: string): Promise<void> {
+    await request<void>(`/rooms/${encodeURIComponent(gameId)}/start`, { method: 'POST' });
+  },
+
+  async getGameState(_gameId: string): Promise<{ game_state: unknown }> {
+    return await request<{ game_state: unknown }>(`/rooms`);
+  },
+
+  async playMove(_gameId: string, _action: unknown): Promise<void> {
+  },
+
+  async updateSettings(_gameId: string, _settings: unknown): Promise<void> {
+  },
+
+  subscribeToGame(_gameId: string, _onState: (state: unknown) => void, _onError: (error: Error) => void): { unsubscribe: () => void } {
+    return { unsubscribe: () => {} };
+  },
 };

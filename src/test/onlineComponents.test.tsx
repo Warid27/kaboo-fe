@@ -45,7 +45,17 @@ vi.mock('@/components/game/GameBoardLayout', () => ({
       data-turn-time-remaining={props.turnTimeRemaining}
       data-game-phase={props.gamePhase}
       data-turn-phase={props.turnPhase}
-    />
+    >
+      <button data-testid="ready-button-mock" onClick={props.onReady}>
+        Ready
+      </button>
+      <button
+        data-testid="player-card-mock"
+        onClick={() => props.onPlayerCardClick && props.onPlayerCardClick('card-1')}
+      >
+        Card
+      </button>
+    </div>
   ),
 }));
 
@@ -336,6 +346,95 @@ describe('OnlineGameBoard', () => {
     });
 
     expect(layout.getAttribute('data-turn-time-remaining')).toBe('28');
+  });
+
+  it('sends READY_TO_PLAY via playMove when onReady is triggered in initial_look', () => {
+    const playMove = vi.fn();
+
+    useOnlineStore.setState((state) => ({
+      ...state,
+      screen: 'game',
+      players: [
+        {
+          id: 'me',
+          name: 'Me',
+          avatarColor: '#fff',
+          cards: [],
+          isHost: true,
+          isReady: false,
+          score: 0,
+          totalScore: 0,
+        },
+      ],
+      myPlayerId: 'me',
+      currentPlayerIndex: 0,
+      gamePhase: 'initial_look',
+      turnPhase: 'draw',
+      settings: {
+        turnTimer: '30',
+        mattsPairsRule: false,
+        useEffectCards: true,
+        numPlayers: 2,
+        botDifficulty: 'medium',
+        targetScore: '100',
+      },
+      playMove,
+    } as any));
+
+    const { getByTestId } = render(<OnlineGameBoard />);
+
+    const readyButton = getByTestId('ready-button-mock');
+    fireEvent.click(readyButton);
+
+    expect(playMove).toHaveBeenCalledTimes(1);
+    expect(playMove).toHaveBeenCalledWith({ type: 'READY_TO_PLAY' });
+  });
+
+  it('sends INITIAL_PEEK via playMove when player card is clicked in initial_look', () => {
+    const playMove = vi.fn();
+
+    useOnlineStore.setState((state) => ({
+      ...state,
+      screen: 'game',
+      players: [
+        {
+          id: 'me',
+          name: 'Me',
+          avatarColor: '#fff',
+          cards: [
+            { id: 'card-1', rank: 'A', suit: 'hearts', value: 1, faceUp: false },
+            { id: 'card-2', rank: '2', suit: 'clubs', value: 2, faceUp: false },
+            { id: 'card-3', rank: '3', suit: 'spades', value: 3, faceUp: false },
+            { id: 'card-4', rank: '4', suit: 'diamonds', value: 4, faceUp: false },
+          ],
+          isHost: true,
+          isReady: false,
+          score: 0,
+          totalScore: 0,
+        },
+      ],
+      myPlayerId: 'me',
+      currentPlayerIndex: 0,
+      gamePhase: 'initial_look',
+      turnPhase: 'draw',
+      settings: {
+        turnTimer: '30',
+        mattsPairsRule: false,
+        useEffectCards: true,
+        numPlayers: 2,
+        botDifficulty: 'medium',
+        targetScore: '100',
+      },
+      playMove,
+    } as any));
+
+    const { getByTestId } = render(<OnlineGameBoard />);
+
+    const cardButton = getByTestId('player-card-mock');
+    fireEvent.click(cardButton);
+
+    expect(playMove).toHaveBeenCalledTimes(1);
+    expect(playMove).toHaveBeenCalledWith({ type: 'INITIAL_PEEK', cardIndex: 0 });
   });
 });
 

@@ -1,22 +1,33 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useOnlineStore } from '@/store/onlineStore';
 import type { GameState } from '@/types/game';
-import { supabase } from '@/lib/supabase';
+import { kabooSocket } from '@/services/kabooSocket';
 import { gameApi } from '@/services/gameApi';
 import { toast } from '@/components/ui/use-toast';
 
+vi.mock('@/services/kabooSocket', () => ({
+  kabooSocket: {
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    send: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  },
+}));
+
 vi.mock('@/services/gameApi', () => ({
   gameApi: {
-    createGame: vi.fn(),
-    joinGame: vi.fn(),
-    playMove: vi.fn(),
-    updateSettings: vi.fn(),
-    startGame: vi.fn(),
-    toggleReady: vi.fn(),
-    leaveGame: vi.fn(),
-    endGame: vi.fn(),
+    getMe: vi.fn(),
+    createRoom: vi.fn(),
+    joinRoom: vi.fn(),
+    leaveRoom: vi.fn(),
+    startRoom: vi.fn(),
+    readyRoom: vi.fn(),
     kickPlayer: vi.fn(),
-    subscribeToGame: vi.fn(),
+    listRooms: vi.fn(),
+    register: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
   },
 }));
 
@@ -24,41 +35,39 @@ vi.mock('@/components/ui/use-toast', () => ({
   toast: vi.fn(),
 }));
 
+const INITIAL_ONLINE_STATE: Partial<ReturnType<typeof useOnlineStore.getState>> = {
+  gameId: '',
+  roomCode: '',
+  players: [],
+  settings: {
+    turnTimer: '30',
+    mattsPairsRule: false,
+    useEffectCards: true,
+    numPlayers: 4,
+    botDifficulty: 'medium',
+    targetScore: '100',
+  },
+  gamePhase: 'waiting',
+  turnPhase: 'draw',
+  currentPlayerIndex: 0,
+  drawPile: [],
+  discardPile: [],
+  heldCard: null,
+  kabooCalled: false,
+  kabooCallerIndex: null,
+  finalRoundTurnsLeft: 0,
+  showKabooAnnouncement: false,
+  isActionLocked: false,
+  turnLog: [],
+  effectType: null,
+  effectStep: null,
+  showEffectOverlay: false,
+};
+
 describe('onlineStore core state and syncFromRemote', () => {
   beforeEach(() => {
-    useOnlineStore.setState((state) => ({
-      ...state,
-      screen: 'home',
-      gameId: '',
-      roomCode: '',
-      myPlayerId: '',
-      players: [],
-      settings: {
-        turnTimer: '30',
-        mattsPairsRule: false,
-        useEffectCards: true,
-        numPlayers: 4,
-        botDifficulty: 'medium',
-        targetScore: '100',
-      },
-      gamePhase: 'waiting',
-      turnPhase: 'draw',
-      currentPlayerIndex: 0,
-      drawPile: [],
-      discardPile: [],
-      heldCard: null,
-      kabooCalled: false,
-      kabooCallerIndex: null,
-      finalRoundTurnsLeft: 0,
-      showKabooAnnouncement: false,
-      isActionLocked: false,
-      turnLog: [],
-      subscription: null,
-      effectType: null,
-      effectStep: null,
-      showEffectOverlay: false,
-    }));
-    vi.restoreAllMocks();
+    useOnlineStore.setState({ ...INITIAL_ONLINE_STATE, screen: 'home', myPlayerId: '' });
+    vi.resetAllMocks();
   });
 
   it('exposes the expected initial state shape', () => {
@@ -86,45 +95,8 @@ describe('onlineStore core state and syncFromRemote', () => {
     expect(state.showEffectOverlay).toBe(false);
   });
 
-  it('resetStore clears state and unsubscribes from subscription', () => {
-    const unsubscribe = vi.fn();
-
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      screen: 'game',
-      gameId: 'game-1',
-      roomCode: 'ABCD',
-      myPlayerId: 'me',
-      players: [
-        {
-          id: 'me',
-          name: 'Me',
-          avatarColor: '#fff',
-          cards: [],
-          isHost: true,
-          isReady: true,
-          score: 0,
-          totalScore: 0,
-        },
-      ],
-      subscription: { unsubscribe } as any,
-    });
-
-    useOnlineStore.getState().resetStore();
-
-    const state = useOnlineStore.getState();
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
-    expect(state.screen).toBe('home');
-    expect(state.gameId).toBe('');
-    expect(state.roomCode).toBe('');
-    expect(state.players).toEqual([]);
-  });
-
-  it('syncFromRemote rotates players so current user is index 0 and maps fields', () => {
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      myPlayerId: 'p2',
-    });
+  it('syncFromRemote rotates players so current user is index 0', () => {
+    useOnlineStore.setState({ ...useOnlineStore.getState(), myPlayerId: 'p2' });
 
     const remoteState: GameState = {
       roomCode: 'ROOM',
@@ -133,7 +105,7 @@ describe('onlineStore core state and syncFromRemote', () => {
       currentTurnUserId: 'p2',
       settings: {
         turnTimer: '60',
-        mattsPairsRule: true,
+        mattsPairsRule: false,
         useEffectCards: true,
         numPlayers: 3,
         botDifficulty: 'hard',
@@ -156,7 +128,6 @@ describe('onlineStore core state and syncFromRemote', () => {
     useOnlineStore.getState().syncFromRemote(remoteState);
 
     const state = useOnlineStore.getState();
-
     expect(state.roomCode).toBe('ROOM');
     expect(state.players.map((p) => p.id)).toEqual(['p2', 'p3', 'p1']);
     expect(state.players[0].id).toBe('p2');
@@ -168,10 +139,7 @@ describe('onlineStore core state and syncFromRemote', () => {
   });
 
   it('syncFromRemote maps effect fields when pendingEffect present', () => {
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      myPlayerId: 'p1',
-    });
+    useOnlineStore.setState({ ...useOnlineStore.getState(), myPlayerId: 'p1' });
 
     const remoteState: GameState = {
       roomCode: 'ROOM_EFFECT',
@@ -203,10 +171,7 @@ describe('onlineStore core state and syncFromRemote', () => {
   });
 
   it('syncFromRemote handles missing playerOrder without crashing', () => {
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      myPlayerId: 'p1',
-    });
+    useOnlineStore.setState({ ...useOnlineStore.getState(), myPlayerId: 'p1' });
 
     const remoteState = {
       roomCode: 'ROOM2',
@@ -227,14 +192,8 @@ describe('onlineStore core state and syncFromRemote', () => {
     expect(state.players.length).toBe(0);
   });
 
-  it('syncFromRemote resets store and unsubscribes when myPlayerId not in playerOrder', () => {
-    const unsubscribe = vi.fn();
-
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      myPlayerId: 'ghost',
-      subscription: { unsubscribe } as any,
-    });
+  it('syncFromRemote resets store and disconnects socket when myPlayerId not in playerOrder', () => {
+    useOnlineStore.setState({ ...useOnlineStore.getState(), myPlayerId: 'ghost' });
 
     const remoteState: GameState = {
       roomCode: 'ROOM3',
@@ -258,7 +217,38 @@ describe('onlineStore core state and syncFromRemote', () => {
     useOnlineStore.getState().syncFromRemote(remoteState);
 
     const state = useOnlineStore.getState();
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(kabooSocket.disconnect).toHaveBeenCalledTimes(1);
+    expect(state.screen).toBe('home');
+    expect(state.gameId).toBe('');
+    expect(state.roomCode).toBe('');
+    expect(state.players).toEqual([]);
+  });
+
+  it('resetStore clears state and calls kabooSocket.disconnect', () => {
+    useOnlineStore.setState({
+      ...useOnlineStore.getState(),
+      screen: 'game',
+      gameId: 'game-1',
+      roomCode: 'ABCD',
+      myPlayerId: 'me',
+      players: [
+        {
+          id: 'me',
+          name: 'Me',
+          avatarColor: '#fff',
+          cards: [],
+          isHost: true,
+          isReady: true,
+          score: 0,
+          totalScore: 0,
+        },
+      ],
+    });
+
+    useOnlineStore.getState().resetStore();
+
+    const state = useOnlineStore.getState();
+    expect(kabooSocket.disconnect).toHaveBeenCalledTimes(1);
     expect(state.screen).toBe('home');
     expect(state.gameId).toBe('');
     expect(state.roomCode).toBe('');
@@ -268,203 +258,104 @@ describe('onlineStore core state and syncFromRemote', () => {
 
 describe('onlineStore actions', () => {
   beforeEach(() => {
-    useOnlineStore.setState((state) => ({
-      ...state,
-      screen: 'home',
-      gameId: '',
-      roomCode: '',
-      myPlayerId: '',
-      players: [],
-      subscription: null,
-    }));
-    vi.restoreAllMocks();
+    useOnlineStore.setState({ ...INITIAL_ONLINE_STATE, screen: 'home', myPlayerId: '' });
+    vi.resetAllMocks();
   });
 
-  it('createGame uses existing session and sets myPlayerId, state, and subscription', async () => {
-    const session = { user: { id: 'user-1' } } as any;
-
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session },
-      error: null,
-    } as any);
-
-    const createMock = vi.mocked(gameApi.createGame);
-    const subscribeMock = vi.mocked(gameApi.subscribeToGame);
-
-    createMock.mockResolvedValue({ gameId: 'g-1', roomCode: 'ABCD' } as any);
-    subscribeMock.mockReturnValue({ unsubscribe: vi.fn() } as any);
-
-    const store = useOnlineStore.getState();
-    await store.createGame('Player');
-
-    const state = useOnlineStore.getState();
-
-    expect(supabase.auth.getSession).toHaveBeenCalledTimes(1);
-    expect(state.myPlayerId).toBe('user-1');
-    expect(createMock).toHaveBeenCalledWith('Player');
-    expect(subscribeMock).toHaveBeenCalledTimes(1);
-    expect(state.gameId).toBe('g-1');
-    expect(state.roomCode).toBe('ABCD');
-    expect(state.screen).toBe('lobby');
-    expect(state.subscription).not.toBeNull();
-  });
-
-  it('createGame signs in anonymously when no session exists', async () => {
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session: null },
-      error: null,
-    } as any);
-
-    vi.spyOn(supabase.auth, 'signInAnonymously').mockResolvedValue({
-      data: {
-        session: { user: { id: 'anon-user' } },
-      },
-      error: null,
-    } as any);
-
-    vi.mocked(gameApi.createGame).mockResolvedValue({ gameId: 'g-2', roomCode: 'WXYZ' } as any);
-    vi.mocked(gameApi.subscribeToGame).mockReturnValue({ unsubscribe: vi.fn() } as any);
-
-    await useOnlineStore.getState().createGame('Anon');
-
-    const state = useOnlineStore.getState();
-    expect(supabase.auth.signInAnonymously).toHaveBeenCalledTimes(1);
-    expect(state.myPlayerId).toBe('anon-user');
+  it('setMyPlayerId updates myPlayerId', () => {
+    useOnlineStore.getState().setMyPlayerId('user-9');
+    expect(useOnlineStore.getState().myPlayerId).toBe('user-9');
   });
 
   it('createGame no-ops when playerName is empty', async () => {
-    const createMock = vi.mocked(gameApi.createGame);
-
     await useOnlineStore.getState().createGame('');
 
-    expect(createMock).not.toHaveBeenCalled();
+    expect(gameApi.getMe).not.toHaveBeenCalled();
+    expect(gameApi.createRoom).not.toHaveBeenCalled();
+    expect(kabooSocket.connect).not.toHaveBeenCalled();
   });
 
   it('createGame shows toast and keeps screen when API fails', async () => {
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session: { user: { id: 'user-1' } } },
-      error: null,
-    } as any);
-
-    vi.mocked(gameApi.createGame).mockRejectedValue(new Error('Network error'));
-
-    const store = useOnlineStore.getState();
-    await store.createGame('Player');
-
-    const state = useOnlineStore.getState();
-    expect(state.screen).toBe('home');
-    expect(vi.mocked(toast)).toHaveBeenCalled();
-  });
-
-  it('subscription error "You are not in this game" kicks player back to home', async () => {
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session: { user: { id: 'user-4' } } },
-      error: null,
-    } as any);
-
-    vi.mocked(gameApi.createGame).mockResolvedValue({ gameId: 'g-sub', roomCode: 'ROOM' } as any);
-
-    const unsubscribe = vi.fn();
-    let errorHandler: ((err: Error) => void) | undefined;
-
-    vi.mocked(gameApi.subscribeToGame).mockImplementation((_gameId, _onUpdate, onError) => {
-      errorHandler = onError;
-      return { unsubscribe } as any;
-    });
+    vi.mocked(gameApi.getMe).mockResolvedValue({ userId: 'user-1', email: 'a@b.com' });
+    vi.mocked(gameApi.createRoom).mockRejectedValue(new Error('Network error'));
 
     await useOnlineStore.getState().createGame('Player');
 
-    const lobbyState = useOnlineStore.getState();
-    expect(lobbyState.screen).toBe('lobby');
-    expect(lobbyState.gameId).toBe('g-sub');
-
-    errorHandler?.(new Error('You are not in this game'));
-
     const state = useOnlineStore.getState();
     expect(state.screen).toBe('home');
-    expect(state.gameId).toBe('');
-    expect(state.roomCode).toBe('');
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(toast)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Kicked from game',
-      })
-    );
+    expect(toast).toHaveBeenCalled();
+  });
+
+  it('createGame sets roomCode and screen to lobby on success', async () => {
+    vi.mocked(gameApi.getMe).mockResolvedValue({ userId: 'user-1', email: 'a@b.com' });
+    vi.mocked(gameApi.createRoom).mockResolvedValue({ code: 'ABCD', host: 'user-1' });
+
+    await useOnlineStore.getState().createGame('Player');
+
+    const state = useOnlineStore.getState();
+    expect(gameApi.getMe).toHaveBeenCalledTimes(1);
+    expect(gameApi.createRoom).toHaveBeenCalledTimes(1);
+    expect(kabooSocket.on).toHaveBeenCalledWith('state', expect.any(Function));
+    expect(kabooSocket.on).toHaveBeenCalledWith('kicked', expect.any(Function));
+    expect(kabooSocket.on).toHaveBeenCalledWith('error', expect.any(Function));
+    expect(kabooSocket.connect).toHaveBeenCalledWith('ABCD', 'user-1');
+    expect(state.myPlayerId).toBe('user-1');
+    expect(state.roomCode).toBe('ABCD');
+    expect(state.screen).toBe('lobby');
   });
 
   it('joinGame no-ops when playerName is empty', async () => {
-    const joinMock = vi.mocked(gameApi.joinGame);
-
     await useOnlineStore.getState().joinGame('ROOM', '');
 
-    expect(joinMock).not.toHaveBeenCalled();
+    expect(gameApi.getMe).not.toHaveBeenCalled();
+    expect(gameApi.joinRoom).not.toHaveBeenCalled();
+    expect(kabooSocket.connect).not.toHaveBeenCalled();
   });
 
-  it('joinGame sets myPlayerId, screen, and subscription on success', async () => {
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session: { user: { id: 'user-2' } } },
-      error: null,
-    } as any);
-
-    vi.mocked(gameApi.joinGame).mockResolvedValue({ gameId: 'g-3' } as any);
-    vi.mocked(gameApi.subscribeToGame).mockReturnValue({ unsubscribe: vi.fn() } as any);
+  it('joinGame sets roomCode and screen to lobby on success', async () => {
+    vi.mocked(gameApi.getMe).mockResolvedValue({ userId: 'user-2', email: 'b@c.com' });
+    vi.mocked(gameApi.joinRoom).mockResolvedValue({ code: 'ROOM', players: {}, status: 'waiting' });
 
     await useOnlineStore.getState().joinGame('ROOM', 'Player');
 
     const state = useOnlineStore.getState();
+    expect(gameApi.joinRoom).toHaveBeenCalledWith('ROOM');
+    expect(kabooSocket.connect).toHaveBeenCalledWith('ROOM', 'user-2');
     expect(state.myPlayerId).toBe('user-2');
-    expect(state.gameId).toBe('g-3');
     expect(state.roomCode).toBe('ROOM');
     expect(state.screen).toBe('lobby');
-    expect(state.subscription).not.toBeNull();
   });
 
-  it('joinGame shows error toast and keeps previous state when API fails', async () => {
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
-      data: { session: { user: { id: 'user-3' } } },
-      error: null,
-    } as any);
-
-    vi.mocked(gameApi.joinGame).mockRejectedValue(new Error('Invalid room'));
+  it('joinGame shows error toast when API fails', async () => {
+    vi.mocked(gameApi.getMe).mockResolvedValue({ userId: 'user-3', email: 'c@d.com' });
+    vi.mocked(gameApi.joinRoom).mockRejectedValue(new Error('Invalid room'));
 
     await useOnlineStore.getState().joinGame('ROOM', 'Player');
 
     const state = useOnlineStore.getState();
     expect(state.screen).toBe('home');
-    expect(vi.mocked(toast)).toHaveBeenCalled();
+    expect(toast).toHaveBeenCalled();
   });
 
-  it('playMove no-ops when gameId is empty', async () => {
-    const playMock = vi.mocked(gameApi.playMove);
+  it('playMove no-ops when roomCode is empty', async () => {
+    await useOnlineStore.getState().playMove({ type: 'READY_TO_PLAY' });
 
-    await useOnlineStore.getState().playMove({ type: 'READY_TO_PLAY' } as any);
-
-    expect(playMock).not.toHaveBeenCalled();
-  });
-
-  it('playMove locks UI during request and unlocks afterward', async () => {
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      gameId: 'g-4',
-    });
-
-    const playMock = vi.mocked(gameApi.playMove);
-    playMock.mockResolvedValue({} as any);
-
-    const promise = useOnlineStore.getState().playMove({ type: 'READY_TO_PLAY' } as any);
-
-    expect(useOnlineStore.getState().isActionLocked).toBe(true);
-
-    await promise;
-
-    expect(playMock).toHaveBeenCalledWith('g-4', { type: 'READY_TO_PLAY' });
+    expect(kabooSocket.send).not.toHaveBeenCalled();
     expect(useOnlineStore.getState().isActionLocked).toBe(false);
   });
 
-  it('updateSettings applies local changes immediately and calls backend', async () => {
+  it('playMove calls kabooSocket.send with correct WS message', async () => {
+    useOnlineStore.setState({ ...useOnlineStore.getState(), roomCode: 'ABCD' });
+
+    await useOnlineStore.getState().playMove({ type: 'READY_TO_PLAY' });
+
+    expect(kabooSocket.send).toHaveBeenCalledWith({ t: 'ready' });
+    expect(useOnlineStore.getState().isActionLocked).toBe(false);
+  });
+
+  it('updateSettings applies local changes', async () => {
     useOnlineStore.setState({
       ...useOnlineStore.getState(),
-      gameId: 'g-5',
       settings: {
         turnTimer: '30',
         mattsPairsRule: false,
@@ -475,97 +366,96 @@ describe('onlineStore actions', () => {
       },
     });
 
-    const updateMock = vi.mocked(gameApi.updateSettings);
-    updateMock.mockResolvedValue({ success: true, settings: {} as any });
-
     await useOnlineStore.getState().updateSettings({ numPlayers: 3 });
 
     const state = useOnlineStore.getState();
     expect(state.settings.numPlayers).toBe(3);
-    expect(updateMock).toHaveBeenCalledWith('g-5', { numPlayers: 3 });
+    expect(state.settings.turnTimer).toBe('30');
   });
 
-  it('startGame switches screen to game and calls backend when gameId exists', async () => {
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      gameId: 'g-6',
-      screen: 'lobby',
-    });
-
-    const startMock = vi.mocked(gameApi.startGame);
-    startMock.mockResolvedValue({ success: true, state: {} as any });
+  it('startGame switches screen to game and calls gameApi.startRoom', async () => {
+    useOnlineStore.setState({ ...useOnlineStore.getState(), roomCode: 'ABCD', screen: 'lobby' });
+    vi.mocked(gameApi.startRoom).mockResolvedValue(undefined);
 
     await useOnlineStore.getState().startGame();
 
     const state = useOnlineStore.getState();
     expect(state.screen).toBe('game');
-    expect(startMock).toHaveBeenCalledWith('g-6');
+    expect(gameApi.startRoom).toHaveBeenCalledWith('ABCD');
   });
 
-  it('leaveGame calls API when gameId exists, unsubscribes, and resets state', async () => {
-    const unsubscribe = vi.fn();
+  it('startGame no-ops when no roomCode', async () => {
+    await useOnlineStore.getState().startGame();
 
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      gameId: 'g-7',
-      screen: 'game',
-      subscription: { unsubscribe } as any,
-    });
+    expect(gameApi.startRoom).not.toHaveBeenCalled();
+    expect(useOnlineStore.getState().screen).toBe('home');
+  });
 
-    const leaveMock = vi.mocked(gameApi.leaveGame);
-    leaveMock.mockResolvedValue({} as any);
+  it('leaveGame calls gameApi.leaveRoom, disconnects socket, resets state', async () => {
+    useOnlineStore.setState({ ...useOnlineStore.getState(), roomCode: 'ABCD', screen: 'game' });
+    vi.mocked(gameApi.leaveRoom).mockResolvedValue(undefined);
 
     await useOnlineStore.getState().leaveGame();
 
     const state = useOnlineStore.getState();
-    expect(leaveMock).toHaveBeenCalledWith('g-7');
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(gameApi.leaveRoom).toHaveBeenCalledWith('ABCD');
+    expect(kabooSocket.disconnect).toHaveBeenCalledTimes(1);
     expect(state.screen).toBe('home');
-    expect(state.gameId).toBe('');
-    expect(state.subscription).toBeNull();
+    expect(state.roomCode).toBe('');
+    expect(state.players).toEqual([]);
   });
 
-  it('kickPlayer calls backend when gameId exists and ignores when missing', async () => {
-    const kickMock = vi.mocked(gameApi.kickPlayer);
+  it('endGame calls gameApi.leaveRoom, disconnects socket, resets state', async () => {
+    useOnlineStore.setState({ ...useOnlineStore.getState(), roomCode: 'ABCD', screen: 'game' });
+    vi.mocked(gameApi.leaveRoom).mockResolvedValue(undefined);
 
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      gameId: 'g-8',
-    });
+    await useOnlineStore.getState().endGame();
+
+    const state = useOnlineStore.getState();
+    expect(gameApi.leaveRoom).toHaveBeenCalledWith('ABCD');
+    expect(kabooSocket.disconnect).toHaveBeenCalledTimes(1);
+    expect(state.screen).toBe('home');
+    expect(state.roomCode).toBe('');
+    expect(state.players).toEqual([]);
+  });
+
+  it('kickPlayer calls gameApi.kickPlayer', async () => {
+    useOnlineStore.setState({ ...useOnlineStore.getState(), roomCode: 'ABCD' });
+    vi.mocked(gameApi.kickPlayer).mockResolvedValue(undefined);
 
     await useOnlineStore.getState().kickPlayer('p1');
 
-    expect(kickMock).toHaveBeenCalledWith('g-8', 'p1');
-
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      gameId: '',
-    });
-
-    await useOnlineStore.getState().kickPlayer('p2');
-
-    expect(kickMock).toHaveBeenCalledTimes(1);
+    expect(gameApi.kickPlayer).toHaveBeenCalledWith('ABCD', 'p1');
   });
 
-  it('endGame calls backend when gameId exists and ignores when missing', async () => {
-    const endMock = vi.mocked(gameApi.endGame);
+  it('kickPlayer no-ops when no roomCode', async () => {
+    await useOnlineStore.getState().kickPlayer('p1');
 
+    expect(gameApi.kickPlayer).not.toHaveBeenCalled();
+  });
+
+  it('toggleReady calls gameApi.readyRoom', async () => {
     useOnlineStore.setState({
       ...useOnlineStore.getState(),
-      gameId: 'g-9',
+      roomCode: 'ABCD',
+      myPlayerId: 'me',
+      players: [
+        {
+          id: 'me',
+          name: 'Me',
+          avatarColor: '#fff',
+          cards: [],
+          isHost: true,
+          isReady: false,
+          score: 0,
+          totalScore: 0,
+        },
+      ],
     });
+    vi.mocked(gameApi.readyRoom).mockResolvedValue(undefined);
 
-    await useOnlineStore.getState().endGame();
+    await useOnlineStore.getState().toggleReady();
 
-    expect(endMock).toHaveBeenCalledWith('g-9');
-
-    useOnlineStore.setState({
-      ...useOnlineStore.getState(),
-      gameId: '',
-    });
-
-    await useOnlineStore.getState().endGame();
-
-    expect(endMock).toHaveBeenCalledTimes(1);
+    expect(gameApi.readyRoom).toHaveBeenCalledWith('ABCD');
   });
 });

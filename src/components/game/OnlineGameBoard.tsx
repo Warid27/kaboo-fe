@@ -30,7 +30,7 @@ export function OnlineGameBoard() {
     leaveGame,
   } = store;
 
-  const [peekedCards] = useState<string[]>([]);
+  const [peekedCards, setPeekedCards] = useState<string[]>([]);
   const [selectedCards] = useState<string[]>([]);
 
   const isMyTurn = currentPlayerIndex === 0;
@@ -59,7 +59,20 @@ export function OnlineGameBoard() {
   }, [isMyTurn, gamePhase, turnPhase]);
 
   const handlePlayerCardClick = (cardId: string) => {
-    if (turnPhase === 'action' && isMyTurn) {
+    if (gamePhase === 'initial_look') {
+      if (peekedCards.includes(cardId)) return;
+      if (peekedCards.length >= 2) return;
+
+      const index = getCardIndex(cardId, myPlayerId);
+      if (index < 0) return;
+
+      setPeekedCards((prev) => [...prev, cardId]);
+      playMove({ type: 'INITIAL_PEEK', cardIndex: index });
+
+      setTimeout(() => {
+        setPeekedCards((prev) => prev.filter((id) => id !== cardId));
+      }, 2000);
+    } else if (turnPhase === 'action' && isMyTurn) {
       playMove({ type: 'SWAP_WITH_OWN', ownCardIndex: getCardIndex(cardId, myPlayerId) });
     } else if (turnPhase === 'effect' && isMyTurn && effectType === 'peek_own') {
       playMove({ type: 'PEEK_OWN', cardIndex: getCardIndex(cardId, myPlayerId) });
@@ -112,6 +125,12 @@ export function OnlineGameBoard() {
   const [isPaused, setIsPaused] = useState(false);
   const isHost = players.find(p => p.id === myPlayerId)?.isHost ?? false;
 
+  const handleReadyToPlay = () => {
+    if (gamePhase === 'initial_look') {
+      playMove({ type: 'READY_TO_PLAY' });
+    }
+  };
+
   const handleEndTurn = () => {
     if (gamePhase === 'initial_look') {
       playMove({ type: 'READY_TO_PLAY' });
@@ -162,6 +181,7 @@ export function OnlineGameBoard() {
       onDiscardHeldCard={() => playMove({ type: 'DISCARD_DRAWN' })}
       onDiscardPair={() => {}}
       onEndTurn={handleEndTurn}
+      onReady={handleReadyToPlay}
       onLeaveGame={handleLeaveGame}
       onEndGame={() => {}}
       onDeclineEffect={() => {}}

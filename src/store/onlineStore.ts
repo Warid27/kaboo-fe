@@ -5,8 +5,7 @@ import {
   AVATAR_COLORS
 } from '@/types/game';
 import { gameApi, GameActionPayload } from '@/services/gameApi';
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { kabooSocket, WSMessage } from '@/services/kabooSocket';
 import { toast } from '@/components/ui/use-toast';
 
 interface OnlineStore {
@@ -15,7 +14,6 @@ interface OnlineStore {
   gameId: string;
   roomCode: string;
   myPlayerId: string;
-  subscription: RealtimeChannel | null;
   
   // Game State
   players: Player[];
@@ -77,11 +75,27 @@ const INITIAL_ONLINE_STATE = {
   showKabooAnnouncement: false,
   isActionLocked: false,
   turnLog: [],
-  subscription: null,
   effectType: null as EffectType | null,
   effectStep: null as 'select' | 'preview' | null,
   showEffectOverlay: false,
 };
+
+function actionToWSMsg(action: GameActionPayload): WSMessage {
+  switch (action.type) {
+    case 'INITIAL_PEEK': return { t: 'initial-peek', cardIndex: action.cardIndex! };
+    case 'READY_TO_PLAY': return { t: 'ready' };
+    case 'DRAW_FROM_DECK': return { t: 'draw-deck' };
+    case 'DRAW_FROM_DISCARD': return { t: 'draw-discard' };
+    case 'DISCARD_DRAWN': return { t: 'discard' };
+    case 'SWAP_WITH_OWN': return { t: 'swap', cardIndex: action.cardIndex! };
+    case 'CALL_KABOO': return { t: 'call-kaboo' };
+    case 'SNAP': return { t: 'snap', cardIndex: action.cardIndex! };
+    case 'PEEK_OWN': return { t: 'peek-own', cardIndex: action.cardIndex! };
+    case 'SPY_OPPONENT': return { t: 'spy-opponent', targetPlayerId: action.targetPlayerId!, cardIndex: action.cardIndex! };
+    case 'SWAP_ANY': return { t: 'swap-any', card1: action.card1!, card2: action.card2! };
+    default: throw new Error(`Unknown action type: ${(action as any).type}`);
+  }
+}
 
 export const useOnlineStore = create<OnlineStore>((set, get) => ({
   ...INITIAL_ONLINE_STATE,
@@ -91,11 +105,11 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   setMyPlayerId: (id) => set({ myPlayerId: id }),
 
   syncFromRemote: (remoteState: GameState) => {
-    const { myPlayerId, subscription } = get();
+    const { myPlayerId } = get();
     const rawOrder = remoteState.playerOrder || [];
 
     if (myPlayerId && !rawOrder.includes(myPlayerId)) {
-      if (subscription) subscription.unsubscribe();
+      kabooSocket.disconnect();
       set({ ...INITIAL_ONLINE_STATE, screen: 'home' });
       return;
     }
@@ -191,31 +205,22 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   createGame: async (playerName) => {
     if (!playerName?.trim()) return;
     try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const { data, error: authError } = await supabase.auth.signInAnonymously();
-        if (authError) throw authError;
-        session = data.session;
-      }
-      
-      if (session?.user?.id) {
-        set({ myPlayerId: session.user.id });
-      }
+      const me = await gameApi.getMe();
+      if (me) set({ myPlayerId: me.userId });
 
-      const { gameId, roomCode } = await gameApi.createGame(playerName);
-      
-      const subscription = gameApi.subscribeToGame(
-        gameId, 
-        (state) => get().syncFromRemote(state),
-        (subscriptionError) => {
-          if (subscriptionError.message === 'You are not in this game') {
-            toast({ title: 'Kicked from game', description: 'You have been removed', variant: 'destructive' });
-            get().resetStore();
-          }
-        }
-      );
+      const { code } = await gameApi.createRoom();
 
-      set({ gameId, roomCode, screen: 'lobby', subscription });
+      kabooSocket.on('state', (state) => get().syncFromRemote(state));
+      kabooSocket.on('kicked', () => {
+        toast({ title: 'Kicked from game', description: 'You have been removed', variant: 'destructive' });
+        get().resetStore();
+      });
+      kabooSocket.on('error', (payload) => {
+        toast({ title: 'Server error', description: payload.message, variant: 'destructive' });
+      });
+      kabooSocket.connect(code, get().myPlayerId);
+
+      set({ roomCode: code, screen: 'lobby' });
     } catch (createError) {
       toast({
         title: 'Failed to create game',
@@ -228,31 +233,22 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   joinGame: async (roomCode, playerName) => {
     if (!playerName?.trim()) return;
     try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const { data, error: authError } = await supabase.auth.signInAnonymously();
-        if (authError) throw authError;
-        session = data.session;
-      }
-      
-      if (session?.user?.id) {
-        set({ myPlayerId: session.user.id });
-      }
+      const me = await gameApi.getMe();
+      if (me) set({ myPlayerId: me.userId });
 
-      const { gameId } = await gameApi.joinGame(roomCode, playerName);
-      
-      const subscription = gameApi.subscribeToGame(
-        gameId, 
-        (state) => get().syncFromRemote(state),
-        (subscriptionError) => {
-          if (subscriptionError.message === 'You are not in this game') {
-            toast({ title: 'Kicked from game', description: 'You have been removed', variant: 'destructive' });
-            get().resetStore();
-          }
-        }
-      );
+      await gameApi.joinRoom(roomCode);
 
-      set({ gameId, roomCode, screen: 'lobby', subscription });
+      kabooSocket.on('state', (state) => get().syncFromRemote(state));
+      kabooSocket.on('kicked', () => {
+        toast({ title: 'Kicked from game', description: 'You have been removed', variant: 'destructive' });
+        get().resetStore();
+      });
+      kabooSocket.on('error', (payload) => {
+        toast({ title: 'Server error', description: payload.message, variant: 'destructive' });
+      });
+      kabooSocket.connect(roomCode, get().myPlayerId);
+
+      set({ roomCode, screen: 'lobby' });
     } catch (joinError) {
       toast({
         title: 'Failed to join game',
@@ -263,11 +259,11 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   },
 
   playMove: async (action) => {
-    const { gameId } = get();
-    if (!gameId) return;
+    const { roomCode } = get();
+    if (!roomCode) return;
     set({ isActionLocked: true });
     try {
-      await gameApi.playMove(gameId, action);
+      kabooSocket.send(actionToWSMsg(action));
     } catch (error) {
       toast({
         title: 'Move failed',
@@ -280,72 +276,67 @@ export const useOnlineStore = create<OnlineStore>((set, get) => ({
   },
 
   updateSettings: async (partial) => {
-    const { gameId, settings } = get();
-    if (!gameId) return;
+    const { settings } = get();
     const nextSettings = { ...settings, ...partial };
     set({ settings: nextSettings });
-    try {
-      await gameApi.updateSettings(gameId, partial);
-    } catch {
-      toast({ title: 'Failed to update settings', variant: 'destructive' });
-    }
   },
 
   startGame: async () => {
-    const { gameId, screen } = get();
-    if (!gameId) return;
+    const { roomCode, screen } = get();
+    if (!roomCode) return;
     if (screen !== 'game') {
       set({ screen: 'game' });
     }
     try {
-      await gameApi.startGame(gameId);
+      await gameApi.startRoom(roomCode);
     } catch {
       toast({ title: 'Failed to start game', variant: 'destructive' });
     }
   },
 
   toggleReady: async () => {
-    const { gameId, players, myPlayerId } = get();
-    if (!gameId) return;
+    const { roomCode, players, myPlayerId } = get();
+    if (!roomCode) return;
     const me = players.find(p => p.id === myPlayerId);
     if (!me) return;
     try {
-      await gameApi.toggleReady(gameId, !me.isReady);
+      await gameApi.readyRoom(roomCode);
     } catch {
       toast({ title: 'Failed to toggle ready state', variant: 'destructive' });
     }
   },
 
   kickPlayer: async (playerId) => {
-    const { gameId } = get();
-    if (!gameId) return;
+    const { roomCode } = get();
+    if (!roomCode) return;
     try {
-      await gameApi.kickPlayer(gameId, playerId);
+      await gameApi.kickPlayer(roomCode, playerId);
     } catch {
       toast({ title: 'Failed to kick player', variant: 'destructive' });
     }
   },
 
   endGame: async () => {
-    const { gameId } = get();
-    if (!gameId) return;
+    const { roomCode } = get();
+    if (!roomCode) return;
     try {
-      await gameApi.endGame(gameId);
+      await gameApi.leaveRoom(roomCode);
+      kabooSocket.disconnect();
+      set({ ...INITIAL_ONLINE_STATE, screen: 'home' });
     } catch {
       toast({ title: 'Failed to end game', variant: 'destructive' });
     }
   },
 
   leaveGame: async () => {
-    const { gameId, subscription } = get();
-    if (gameId) await gameApi.leaveGame(gameId);
-    if (subscription) subscription.unsubscribe();
+    const { roomCode } = get();
+    if (roomCode) await gameApi.leaveRoom(roomCode);
+    kabooSocket.disconnect();
     set({ ...INITIAL_ONLINE_STATE, screen: 'home' });
   },
 
   resetStore: () => {
-    const { subscription } = get();
-    if (subscription) subscription.unsubscribe();
+    kabooSocket.disconnect();
     set({ ...INITIAL_ONLINE_STATE, screen: 'home' });
   },
 }));

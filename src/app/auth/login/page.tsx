@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { gameApi } from '@/services/gameApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -28,17 +28,10 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (signInError || !data.session) {
-        setError(signInError?.message ?? 'Login failed');
-        return;
-      }
-
+      await gameApi.login(values.email, values.password);
       router.push('/profile');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setSubmitting(false);
     }

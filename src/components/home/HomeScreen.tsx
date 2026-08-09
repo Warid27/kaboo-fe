@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useOnlineStore } from '@/store/onlineStore';
 import { useOfflineStore } from '@/store/offlineStore';
 import { useStatsStore } from '@/store/statsStore';
+import { gameApi, RoomListItem } from '@/services/gameApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FloatingCard } from './FloatingCard';
 import { StatsModal } from './StatsModal';
-import { Bot, Gamepad2, Users, BarChart3 } from 'lucide-react';
+import { Bot, Gamepad2, Users, BarChart3, RefreshCw } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 
 export function HomeScreen() {
@@ -23,8 +24,28 @@ export function HomeScreen() {
   const [showJoinInput, setShowJoinInput] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [showStats, setShowStats] = useState(false);
+  const [rooms, setRooms] = useState<RoomListItem[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
   const isOnline = process.env.NEXT_PUBLIC_IS_ONLINE === 'true';
   const { profile } = useProfile();
+
+  const fetchRooms = useCallback(async () => {
+    if (!isOnline) return;
+    setLoadingRooms(true);
+    try {
+      const list = await gameApi.listRooms();
+      setRooms(list);
+    } catch {
+    } finally {
+      setLoadingRooms(false);
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    fetchRooms();
+    const interval = setInterval(fetchRooms, 5000);
+    return () => clearInterval(interval);
+  }, [fetchRooms]);
 
   useEffect(() => {
     if (!profile) return;
@@ -202,6 +223,54 @@ export function HomeScreen() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {isOnline && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5 }}
+            className="mt-4"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-body text-xs text-muted-foreground">Open Rooms</span>
+              <button onClick={fetchRooms} className="text-muted-foreground hover:text-foreground transition-colors">
+                <RefreshCw className={`h-3 w-3 ${loadingRooms ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+            {rooms.length === 0 ? (
+              <p className="font-body text-xs text-muted-foreground text-center py-2">No rooms available</p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {rooms.map((room) => (
+                  <div
+                    key={room.code}
+                    className="flex items-center justify-between rounded-lg bg-card/60 border border-border/20 px-3 py-2 backdrop-blur-sm"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-display text-sm font-bold tracking-wider text-foreground">
+                        {room.code}
+                      </span>
+                      <span className="font-body text-xs text-muted-foreground">
+                        {room.host} • {room.playerCount} player{room.playerCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setJoinCode(room.code);
+                        setShowJoinInput(true);
+                      }}
+                      disabled={!playerName.trim()}
+                      size="sm"
+                      className="h-8 rounded-lg font-display text-xs font-bold gradient-accent text-accent-foreground hover:brightness-110 transition-all disabled:opacity-40"
+                    >
+                      Join
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Footer */}

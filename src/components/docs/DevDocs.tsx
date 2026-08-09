@@ -176,7 +176,7 @@ TurnPhase:  draw → action → effect → tap_window → end_turn`}</CodeBlock>
           headers={['File', 'Purpose']}
           rows={[
             ['offlineStore.ts', 'Core offline store. Uses gameEngine.ts for all state transitions. The primary store for single-player/local games.'],
-            ['onlineStore.ts', 'Core online store. Synchronizes state with the Supabase backend and handles multiplayer communication.'],
+            ['onlineStore.ts', 'Core online store. Synchronizes state with the Cloudflare Workers backend and handles multiplayer communication.'],
             ['engine/gameEngine.ts', 'The heart of the game. Contains pure, side-effect-free logic for all game rules and state transitions.'],
             ['types/game.ts', 'All data types validated with Zod schemas — Card, Player, GameSettings, game phase enums, avatar colors, and action schemas.'],
             ['slices/cardActions.ts', 'Handles draw, swap, discard flows. Manages heldCard state and card movement between piles and player hands.'],
@@ -253,7 +253,7 @@ function RoadmapDocs() {
         <DocTable
           headers={['Feature', 'Priority', 'Description']}
           rows={[
-            ['Online Multiplayer', 'High', 'Real-time WebSocket multiplayer via Supabase Realtime or Socket.io. Room creation and joining UI exists but is disabled (NEXT_PUBLIC_IS_ONLINE flag).'],
+            ['Online Multiplayer', 'High', 'Real-time WebSocket multiplayer via Cloudflare Workers + Durable Objects. Room creation and joining UI is now live.'],
             ['Mobile Touch Optimization', 'Medium', 'UI is responsive but touch targets and drag interactions need polish for mobile.'],
             ['Animations Config', 'Low', 'animationsEnabled setting exists but isn\'t wired to all animations.'],
           ]}

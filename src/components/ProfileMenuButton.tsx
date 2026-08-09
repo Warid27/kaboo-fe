@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, LogOut } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { gameApi } from "@/services/gameApi";
 
-type AuthState = "unknown" | "authenticated" | "anonymous" | "none";
+type AuthState = "unknown" | "authenticated" | "none";
 
 export function ProfileMenuButton() {
   const router = useRouter();
@@ -25,35 +25,15 @@ export function ProfileMenuButton() {
     let cancelled = false;
 
     const load = async () => {
-      const { data } = await supabase.auth.getSession();
+      const me = await gameApi.getMe();
       if (cancelled) return;
-      const session = data.session;
-      if (!session) {
-        setAuthState("none");
-      } else if (session.user?.is_anonymous) {
-        setAuthState("anonymous");
-      } else {
-        setAuthState("authenticated");
-      }
+      setAuthState(me ? "authenticated" : "none");
     };
 
     load();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) {
-          setAuthState("none");
-        } else if (session.user?.is_anonymous) {
-          setAuthState("anonymous");
-        } else {
-          setAuthState("authenticated");
-        }
-      },
-    );
-
     return () => {
       cancelled = true;
-      listener.subscription.unsubscribe();
     };
   }, [mounted]);
 
@@ -77,12 +57,12 @@ export function ProfileMenuButton() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await gameApi.logout();
     setOpen(false);
     router.push("/");
   };
 
-  const showMenu = authState === "authenticated" || authState === "anonymous";
+  const showMenu = authState === "authenticated";
 
   return (
     <>

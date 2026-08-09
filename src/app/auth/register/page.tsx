@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { gameApi } from '@/services/gameApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -30,22 +30,17 @@ export default function RegisterPage() {
     setError(null);
     setSuccess(null);
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (signUpError) {
-        setError(signUpError.message);
-        return;
-      }
-
-      if (!data.user) {
+      const result = await gameApi.register(values.email, values.password);
+      
+      if (!result?.userId) {
         setError('Registration failed');
         return;
       }
 
-      setSuccess('Check your email to verify your account, then you can sign in.');
+      setSuccess('Account created! Redirecting...');
+      setTimeout(() => router.push('/profile'), 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setSubmitting(false);
     }
@@ -56,7 +51,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl ring-1 ring-border">
         <h1 className="text-2xl font-semibold text-slate-50">Create a Kaboo account</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Use an email you can verify. Password is stored in Supabase Auth.
+          Use an email you can verify. Password is stored securely with PBKDF2 hashing.
         </p>
 
         <Form {...form}>
